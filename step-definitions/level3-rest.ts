@@ -1,7 +1,7 @@
 import {DataTable} from "@cucumber/cucumber"
 import assert from "assert"
 import {binding, given, then} from "cucumber-tsflow"
-import {Ketting, Link, State} from "ketting"
+import {Ketting, Link, Resource} from "ketting"
 import {Workspace} from "./workspace"
 
 
@@ -14,34 +14,43 @@ export class Fetch {
 
   private ketting: Ketting
 
-  private url = ""
-
   // @ts-ignore
-  private state: State
+  private resource: Resource
 
 
   public constructor(protected workspace: Workspace) {
     this.ketting = new Ketting(workspace.eventlyUrl)
   }
 
-  @given(/Client GETs ([\w/]+)/)
-  public async getUrl(url: string) {
-    this.url = url
-    this.state = await this.ketting
-      .go(this.url)
-      .get()
+
+  async fetch() {
+    return await this.resource.get()
   }
 
+
+  @given("Client starts at root")
+  public async getRoot() {
+    this.resource = await this.ketting.go("/")
+  }
+
+  @given(/follows rel (.+)/)
+  public async followRel(rel: string) {
+    this.resource = await this.resource.follow(rel)
+  }
+
+
   @then("content is HAL")
-  public isHal() {
-    const {headers} = this.state
+  public async isHal() {
+    const state = await this.fetch()
+    const {headers} = state
     const contentType = headers.get("content-type")
-    assert(contentType?.includes("application/hal+json"))
+    assert(contentType?.includes("application/hal+json"), `Content-Type not HAL: ${contentType}`)
   }
 
   @then(/has L3 Home profile/)
-  public hasHomeProfile() {
-    const {headers} = this.state
+  public async hasHomeProfile() {
+    const state = await this.fetch()
+    const {headers} = state
     const profiles = headers.get("profile")
     assert(profiles?.includes(HOME_PROFILE), `missing ${HOME_PROFILE} profile header.`)
     const allows = headers.get("allow")
@@ -50,8 +59,9 @@ export class Fetch {
   }
 
   @then(/has links/)
-  public hasLinks(data: DataTable) {
-    const {links: actual} = this.state
+  public async hasLinks(data: DataTable) {
+    const state = await this.fetch()
+    const {links: actual} = state
     const expected: Link[] = data.hashes()
     for (const {rel, href, title} of expected) {
       const actualLink = actual.get(rel)
