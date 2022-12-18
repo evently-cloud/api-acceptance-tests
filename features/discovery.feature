@@ -8,7 +8,7 @@ Feature: Look Around
     And has links
       | rel       | href          | title                                     |
       | append    | /append       | Append events to the ledger.              |
-      | ledgers   |/ledgers       | Download or reset ledger events.          |
+      | ledgers   | /ledgers      | Download or reset ledger events.          |
       | registry  | /registry     | Register entity events for the ledger.    |
       | selectors | /selectors    | Selects events to replay from the ledger. |
 
@@ -45,3 +45,10 @@ Feature: Look Around
       | rel    | href              | title                                |
       | replay | /selectors/replay | Replay entity events                 |
       | filter | /selectors/filter | Filter events by meta and event data |
+
+
+  Scenario: Append Fact Resource
+    Given Client starts at root
+    And follows rel append
+    And follows rel factual
+    Then content is JSON Schema
