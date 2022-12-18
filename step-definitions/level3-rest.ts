@@ -99,4 +99,16 @@ export class Fetch {
       }
     }
   }
+
+  @then(/Client is not authorized/)
+  public async notAuthorized() {
+    try {
+      await this.fetch()
+      assert(false, "Client should not be authorized to access this resource.")
+    } catch (err: any) {
+      assert(err.status = 401)
+    }
+  }
 }
+
+
