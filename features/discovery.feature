@@ -52,3 +52,28 @@ Feature: Look Around
     And follows rel append
     And follows rel factual
     Then content is JSON Schema
+    And has L3 Form profile
+
+
+  Scenario: Append Serial Resource
+    Given Client starts at root
+    And follows rel append
+    And follows rel serial
+    Then content is JSON Schema
+    And has L3 Form profile
+
+
+  Scenario: Append Atomic Resource
+    Given Client starts at root
+    And follows rel append
+    And follows rel atomic
+    Then content is JSON Schema
+    And has L3 Form profile
+
+
+  Scenario: Register Event Resource
+    Given Client starts at root
+    And follows rel registry
+    And follows rel register
+    Then content is JSON Schema
+    And has L3 Form profile
