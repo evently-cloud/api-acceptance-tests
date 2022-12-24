@@ -34,31 +34,31 @@ Feature: Look Around
     Given Client starts at root
     And follows rel append
     And follows rel factual
-    Then content is JSON Schema
-    And has L3 Form profile
+    Then has L3 Form profile
+    And content is JSON Schema
 
 
   Scenario: Append Serial Resource
     Given Client starts at root
     And follows rel append
     And follows rel serial
-    Then content is JSON Schema
-    And has L3 Form profile
+    Then has L3 Form profile
+    And content is JSON Schema
 
 
   Scenario: Append Atomic Resource
     Given Client starts at root
     And follows rel append
     And follows rel atomic
-    Then content is JSON Schema
-    And has L3 Form profile
+    Then has L3 Form profile
+    And content is JSON Schema
 
 
   #########
   # Ledgers
   #########
 
-  Scenario: Legers Resource requires Authorization
+  Scenario: Ledgers Resource requires Authorization
     Given Client starts at root
     And follows rel ledgers
     Then Client is not authorized
@@ -72,8 +72,8 @@ Feature: Look Around
   Scenario: Registry Resource
     Given Client starts at root
     And follows rel registry
-    Then content is HAL
-    And has L3 Home profile
+    Then has L3 Home profile
+    And content is HAL
     And has links
       | rel       | href                      | title                       |
       | register  | /registry/register-event  | Register an Event           |
@@ -83,8 +83,8 @@ Feature: Look Around
     Given Client starts at root
     And follows rel registry
     And follows rel register
-    Then content is JSON Schema
-    And has L3 Form profile
+    Then has L3 Form profile
+    And content is JSON Schema
 
   Scenario: Entities Registry Resource requires Authorization
     Given Client starts at root
@@ -100,8 +100,8 @@ Feature: Look Around
   Scenario: Selectors Resource
     Given Client starts at root
     And follows rel selectors
-    Then content is HAL
-    And has L3 Home profile
+    Then has L3 Home profile
+    And content is HAL
     And has links
       | rel    | href              | title                                |
       | replay | /selectors/replay | Replay entity events                 |

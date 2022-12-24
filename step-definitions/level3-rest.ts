@@ -31,11 +31,11 @@ export class Fetch {
 
   private assertOnlyAllows(headers: Headers, methods: string[]) {
     const allowHeader = headers.get("allow") || ""
-    const allows = allowHeader.split(/\W,\W*/).map((m) => m.toUpperCase())
+    const allows = allowHeader.split(",").map((m) => m.trim().toUpperCase())
     const extra = methods.filter((m) => !allows.includes(m))
     const missing = allows.filter((m) => !methods.includes(m))
-    assert(missing.length, `allow header missing methods: ${missing}`)
-    assert(extra.length, `allow header has extra methods: ${extra}`)
+    assert(!missing.length, `allow header missing methods: ${missing}`)
+    assert(!extra.length, `allow header has extra methods: ${extra}`)
   }
 
 
