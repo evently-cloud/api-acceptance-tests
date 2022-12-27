@@ -1,7 +1,7 @@
 import {DataTable} from "@cucumber/cucumber"
 import assert from "assert"
 import {binding, given, then} from "cucumber-tsflow"
-import {Ketting, Link, Resource} from "ketting"
+import {bearerAuth, Ketting, Link, Resource} from "ketting"
 import {Workspace} from "./workspace"
 
 
@@ -13,14 +13,20 @@ const FORM_PROFILE = "https://level3.rest/profiles/form"
 @binding([Workspace])
 export class Fetch {
 
-  private ketting: Ketting
+  private noauthKetting: Ketting
+  private authKetting: Ketting
+
+  private client: Ketting
 
   // @ts-ignore
   private resource: Resource
 
 
   public constructor(protected workspace: Workspace) {
-    this.ketting = new Ketting(workspace.eventlyUrl)
+    this.noauthKetting = new Ketting(workspace.eventlyUrl)
+    this.authKetting = new Ketting(workspace.eventlyUrl)
+    this.authKetting.use(bearerAuth(workspace.eventlyToken))
+    this.client = this.noauthKetting
   }
 
 
@@ -41,8 +47,17 @@ export class Fetch {
 
   @given("Client starts at root")
   public async getRoot() {
-    this.resource = await this.ketting.go("/")
+    this.client = this.noauthKetting
+    this.resource = await this.client.go("/")
   }
+
+
+  @given("Authenticated Client starts at root")
+  public async getRootAsAuthenticatedClient() {
+    this.client = this.authKetting
+    this.resource = await this.client.go("/")
+  }
+
 
   @given(/follows rel (.+)/)
   public async followRel(rel: string) {
@@ -58,6 +73,7 @@ export class Fetch {
     assert(contentType?.includes("application/hal+json"), `Content-Type not HAL: ${contentType}`)
   }
 
+
   @then("content is JSON Schema")
   public async isJsonSchema() {
     const state = await this.fetch()
@@ -65,6 +81,7 @@ export class Fetch {
     const contentType = headers.get("content-type")
     assert(contentType?.includes("application/schema+json"), `Content-Type not JSON Schema: ${contentType}`)
   }
+
 
   @then(/has L3 Home profile/)
   public async hasHomeProfile() {
@@ -75,6 +92,7 @@ export class Fetch {
     this.assertOnlyAllows(headers, ["GET", "HEAD"])
   }
 
+
   @then(/has L3 Form profile/)
   public async hasFormProfile() {
     const state = await this.fetch()
@@ -83,6 +101,7 @@ export class Fetch {
     assert(profiles?.includes(FORM_PROFILE), `missing ${FORM_PROFILE} profile header.`)
     this.assertOnlyAllows(headers, ["GET", "HEAD", "POST"])
   }
+
 
   @then(/has links/)
   public async hasLinks(data: DataTable) {
@@ -100,6 +119,7 @@ export class Fetch {
     }
   }
 
+
   @then(/Client is not authorized/)
   public async notAuthorized() {
     try {
@@ -108,6 +128,16 @@ export class Fetch {
     } catch (err: any) {
       assert(err.status = 401)
     }
+  }
+
+
+  @then(/body has (string|number|boolean) field '(\w+)'/)
+  public async bodyHasField(expectedType: string, field: string) {
+    const state = await this.fetch()
+    const actualField = state.data[field]
+    assert(field !== undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
+    const actualType = typeof actualField
+    assert (expectedType === actualType, `wrong type for ${actualField}: expected ${expectedType}, found: ${actualType}`)
   }
 }
 
