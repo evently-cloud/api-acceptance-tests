@@ -8,6 +8,8 @@ import {Workspace} from "./workspace"
 
 const HOME_PROFILE = "https://level3.rest/profiles/home"
 const FORM_PROFILE = "https://level3.rest/profiles/form"
+const LOOKUP_PROFILE = "https://level3.rest/profiles/lookup"
+const REPRESENTATION_PROFILE = "https://level3.rest/profiles/mixins/representation"
 
 
 @binding([Workspace])
@@ -30,8 +32,8 @@ export class Fetch {
   }
 
 
-  async fetch() {
-    return await this.resource.get()
+  fetch() {
+    return this.resource.get()
   }
 
 
@@ -40,8 +42,8 @@ export class Fetch {
     const allows = allowHeader.split(",").map((m) => m.trim().toUpperCase())
     const extra = methods.filter((m) => !allows.includes(m))
     const missing = allows.filter((m) => !methods.includes(m))
-    assert(!missing.length, `allow header missing methods: ${missing}`)
-    assert(!extra.length, `allow header has extra methods: ${extra}`)
+    assert.ok(!missing.length, `allow header missing methods: ${missing}`)
+    assert.ok(!extra.length, `allow header has extra methods: ${extra}`)
   }
 
 
@@ -70,7 +72,7 @@ export class Fetch {
     const state = await this.fetch()
     const {headers} = state
     const contentType = headers.get("content-type")
-    assert(contentType?.includes("application/hal+json"), `Content-Type not HAL: ${contentType}`)
+    assert.ok(contentType?.includes("application/hal+json"), `Content-Type not HAL: ${contentType}`)
   }
 
 
@@ -79,27 +81,41 @@ export class Fetch {
     const state = await this.fetch()
     const {headers} = state
     const contentType = headers.get("content-type")
-    assert(contentType?.includes("application/schema+json"), `Content-Type not JSON Schema: ${contentType}`)
+    assert.ok(contentType?.includes("application/schema+json"), `Content-Type not JSON Schema: ${contentType}`)
   }
 
 
   @then(/has L3 Home profile/)
   public async hasHomeProfile() {
-    const state = await this.fetch()
-    const {headers} = state
-    const profiles = headers.get("profile")
-    assert(profiles?.includes(HOME_PROFILE), `missing ${HOME_PROFILE} profile header.`)
-    this.assertOnlyAllows(headers, ["GET", "HEAD"])
+    await this.hasProfile(HOME_PROFILE, ["GET", "HEAD"])
   }
 
 
   @then(/has L3 Form profile/)
   public async hasFormProfile() {
+    await this.hasProfile(FORM_PROFILE, ["GET", "HEAD", "POST"])
+  }
+
+
+  @then(/has L3 Lookup profile/)
+  public async hasLookupProfile() {
+    await this.hasProfile(LOOKUP_PROFILE, ["GET", "HEAD", "POST"])
+  }
+
+
+  @then(/has L3 Representation profile/)
+  public async hasRepresentationProfile() {
+    await this.hasProfile(REPRESENTATION_PROFILE)
+  }
+
+  async hasProfile(profile: string, allows?: string[]) {
     const state = await this.fetch()
     const {headers} = state
     const profiles = headers.get("profile")
-    assert(profiles?.includes(FORM_PROFILE), `missing ${FORM_PROFILE} profile header.`)
-    this.assertOnlyAllows(headers, ["GET", "HEAD", "POST"])
+    assert.ok(profiles?.includes(profile), `missing ${profile} profile header.`)
+    if (allows) {
+      this.assertOnlyAllows(headers, allows)
+    }
   }
 
 
@@ -110,11 +126,11 @@ export class Fetch {
     const expected: Link[] = data.hashes()
     for (const {rel, href, title} of expected) {
       const actualLink = actual.get(rel)
-      assert(actualLink, `missing link ${rel}`)
+      assert.ok(actualLink, `missing link ${rel}`)
       const {href: actualHref, title: actualTitle} = actualLink
-      assert(href === actualHref, `expected href ${href}, actual: ${actualHref}`)
+      assert.equal(href, actualHref, "Wrong link HREF")
       if (title) {
-        assert(title === actualTitle, `expected title ${title}, actual: ${actualTitle}`)
+        assert.equal(title, actualTitle, "wrong link TITLE")
       }
     }
   }
@@ -124,9 +140,9 @@ export class Fetch {
   public async notAuthorized() {
     try {
       await this.fetch()
-      assert(false, "Client should not be authorized to access this resource.")
+      assert.fail("Client should not be authorized to access this resource.")
     } catch (err: any) {
-      assert(err.status = 401)
+      assert.equal(err.status, 401, "wrong status code")
     }
   }
 
@@ -135,10 +151,8 @@ export class Fetch {
   public async bodyHasField(expectedType: string, field: string) {
     const state = await this.fetch()
     const actualField = state.data[field]
-    assert(field !== undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
+    assert.notEqual(field, undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
     const actualType = typeof actualField
-    assert (expectedType === actualType, `wrong type for ${actualField}: expected ${expectedType}, found: ${actualType}`)
+    assert.equal(expectedType, actualType, `wrong type for ${actualField}`)
   }
 }
-
-
