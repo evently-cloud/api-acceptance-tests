@@ -79,12 +79,18 @@ Feature: Look Around
       | register  | /registry/register-event  | Register an Event           |
       | entities  | /registry/entities        | Entity and Event Registry   |
 
+
   Scenario: Register Event Resource
     Given Client starts at root
     And follows rel registry
     And follows rel register
     Then has L3 Form profile
+    And has L3 Add Entry Resource profile
     And content is JSON Schema
+    And has links
+      | rel                                                     | href               | title                       |
+      | https://level3.rest/patterns/list/editable#adds-to-list | /registry/entities | Adds events to this entity. |
+
 
   Scenario: Entities Registry Resource requires Authorization
     Given Client starts at root
@@ -107,11 +113,13 @@ Feature: Look Around
       | replay | /selectors/replay | Replay entity events                 |
       | filter | /selectors/filter | Filter events by meta and event data |
 
+
   Scenario: Create Replay Selector Resource requires Authorization
     Given Client starts at root
     And follows rel selectors
     And follows rel replay
     Then Client is not authorized
+
 
   Scenario: Create Filter Selector Resource requires Authorization
     Given Client starts at root

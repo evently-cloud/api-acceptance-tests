@@ -6,12 +6,6 @@ import {Workspace} from "./workspace"
 
 
 
-const HOME_PROFILE = "https://level3.rest/profiles/home"
-const FORM_PROFILE = "https://level3.rest/profiles/form"
-const LOOKUP_PROFILE = "https://level3.rest/profiles/lookup"
-const REPRESENTATION_PROFILE = "https://level3.rest/profiles/mixins/representation"
-
-
 @binding([Workspace])
 export class Fetch {
 
@@ -87,26 +81,39 @@ export class Fetch {
 
   @then(/has L3 Home profile/)
   public async hasHomeProfile() {
-    await this.hasProfile(HOME_PROFILE, ["GET", "HEAD"])
+    await this.hasProfile("https://level3.rest/profiles/home", ["GET", "HEAD"])
   }
 
 
   @then(/has L3 Form profile/)
   public async hasFormProfile() {
-    await this.hasProfile(FORM_PROFILE, ["GET", "HEAD", "POST"])
+    await this.hasProfile("https://level3.rest/profiles/form", ["GET", "HEAD", "POST"])
   }
 
 
   @then(/has L3 Lookup profile/)
   public async hasLookupProfile() {
-    await this.hasProfile(LOOKUP_PROFILE, ["GET", "HEAD", "POST"])
+    await this.hasProfile("https://level3.rest/profiles/lookup", ["GET", "HEAD", "POST"])
   }
 
 
   @then(/has L3 Representation profile/)
   public async hasRepresentationProfile() {
-    await this.hasProfile(REPRESENTATION_PROFILE)
+    await this.hasProfile("https://level3.rest/profiles/mixins/representation")
   }
+
+
+  @then(/has L3 Add Entry Resource profile/)
+  public async hasAddEntryResourceProfile() {
+    await this.hasProfile("https://level3.rest/patterns/list#add-entry-resource")
+  }
+
+
+  @then(/has L3 List Resource profile/)
+  public async hasListResourceProfile() {
+    await this.hasProfile("https://level3.rest/patterns/list#list-resource")
+  }
+
 
   async hasProfile(profile: string, allows?: string[]) {
     const state = await this.fetch()
@@ -150,9 +157,18 @@ export class Fetch {
   @then(/body has (string|number|boolean) field '(\w+)'/)
   public async bodyHasField(expectedType: string, field: string) {
     const state = await this.fetch()
-    const actualField = state.data[field]
-    assert.notEqual(field, undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
-    const actualType = typeof actualField
-    assert.equal(expectedType, actualType, `wrong type for ${actualField}`)
+    const actualValue = state.data[field]
+    assert.notEqual(actualValue, undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
+    const actualType = typeof actualValue
+    assert.equal(expectedType, actualType, `wrong type for ${actualValue}`)
+  }
+
+
+  @then(/body has field '(\w+)' with value '([\w\s]+)'/)
+  public async bodyHasFieldWithValue(field: string, expectedValue: any) {
+    const state = await this.fetch()
+    const actualValue = state.data[field]
+    assert.notEqual(actualValue, undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
+    assert.equal(expectedValue, actualValue, `wrong value for field '${field}'`)
   }
 }
