@@ -60,7 +60,7 @@ export class Fetch {
   }
 
 
-  @given(/follows rel (.+)/)
+  @given(/follows rel '(.+)'/)
   public async followRel(rel: string) {
     this.resource = await this.resource.follow(rel)
   }

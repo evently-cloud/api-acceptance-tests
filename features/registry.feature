@@ -3,8 +3,8 @@ Feature: Registry
 
   Scenario: Discover registry
     Given Authenticated Client starts at root
-    And follows rel registry
-    And follows rel entities
+    And follows rel 'registry'
+    And follows rel 'entities'
     Then has L3 Home profile
     And has L3 List Resource profile
     And has links
@@ -14,15 +14,15 @@ Feature: Registry
 
   Scenario: Register an Event type
     Given Authenticated Client starts at root
-    And follows rel registry
-    And follows rel register
+    And follows rel 'registry'
+    And follows rel 'register'
     Then registers event 'Registration Tested' in entity 'tests'
 
 
   Scenario: Examine an entity
     Given Authenticated Client starts at root
-    And follows rel registry
-    And follows rel entities
+    And follows rel 'registry'
+    And follows rel 'entities'
     And follows list entry with name 'tests'
     Then has L3 Home profile
     And has L3 List Resource profile
@@ -34,8 +34,8 @@ Feature: Registry
 
   Scenario: Examine an entity event
     Given Authenticated Client starts at root
-    And follows rel registry
-    And follows rel entities
+    And follows rel 'registry'
+    And follows rel 'entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
     Then has L3 Data profile
@@ -44,8 +44,8 @@ Feature: Registry
 
   Scenario: Delete an entity event
     Given Authenticated Client starts at root
-    And follows rel registry
-    And follows rel entities
+    And follows rel 'registry'
+    And follows rel 'entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
     Then deletes the resource
