@@ -31,6 +31,11 @@ export class Fetch {
   }
 
 
+  async postAndFollow(data: any) {
+    this.resource = await this.resource.postFollow({data})
+  }
+
+
   private assertOnlyAllows(headers: Headers, methods: string[]) {
     const allowHeader = headers.get("allow") || ""
     const allows = allowHeader.split(",").map((m) => m.trim().toUpperCase())
@@ -58,6 +63,26 @@ export class Fetch {
   @given(/follows rel (.+)/)
   public async followRel(rel: string) {
     this.resource = await this.resource.follow(rel)
+  }
+
+
+  @then(/follows list entry with name '(.+)'/)
+  public async followListEntry(name: string) {
+    const entryLinks = await this.resource.links("https://level3.rest/patterns/list#list-entry")
+    // @ts-ignore
+    const entry = entryLinks.find((l) => l.name === name)
+    assert.ok(entry !== undefined, `cannot find link named '${name}' in list: ${JSON.stringify(entryLinks)}`)
+    this.resource = await this.client.go(entry)
+  }
+
+
+  @then(/deletes the resource/)
+  public async deleteResource() {
+    try {
+      await this.resource.delete()
+    } catch (err: any) {
+      assert.fail(err)
+    }
   }
 
 
@@ -97,6 +122,12 @@ export class Fetch {
   }
 
 
+  @then(/has L3 Data profile/)
+  public async hasDataProfile() {
+    await this.hasProfile("https://level3.rest/profiles/data", ["GET", "HEAD", "DELETE"])
+  }
+
+
   @then(/has L3 Representation profile/)
   public async hasRepresentationProfile() {
     await this.hasProfile("https://level3.rest/profiles/mixins/representation")
@@ -112,6 +143,12 @@ export class Fetch {
   @then(/has L3 List Resource profile/)
   public async hasListResourceProfile() {
     await this.hasProfile("https://level3.rest/patterns/list#list-resource")
+  }
+
+
+  @then(/has L3 Entry Resource profile/)
+  public async hasEntryResourceProfile() {
+    await this.hasProfile("https://level3.rest/patterns/list#entry-resource")
   }
 
 
@@ -170,5 +207,19 @@ export class Fetch {
     const actualValue = state.data[field]
     assert.notEqual(actualValue, undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
     assert.equal(expectedValue, actualValue, `wrong value for field '${field}'`)
+  }
+
+
+  @then(/registers event '(.+)' in entity '(.+)'/)
+  public async registerEvent(event: string, entity: string) {
+    const form = {
+      entity,
+      event
+    }
+    await this.postAndFollow(form)
+    const state = await this.fetch()
+    const {entity: actualEntity, event: actualEvent} = state.data
+    assert.equal(entity, actualEntity, "not the same entity")
+    assert.equal(event, actualEvent, "not the same event")
   }
 }

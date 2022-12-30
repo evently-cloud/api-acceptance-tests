@@ -88,8 +88,8 @@ Feature: Look Around
     And has L3 Add Entry Resource profile
     And content is JSON Schema
     And has links
-      | rel                                                     | href               | title                       |
-      | https://level3.rest/patterns/list/editable#adds-to-list | /registry/entities | Adds events to this entity. |
+      | rel                                                     | href               | title                            |
+      | https://level3.rest/patterns/list/editable#adds-to-list | /registry/entities | Adds event types to this entity. |
 
 
   Scenario: Entities Registry Resource requires Authorization
