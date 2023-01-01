@@ -7,6 +7,7 @@ Feature: Registry
     And follows rel 'entities'
     Then has L3 Home profile
     And has L3 List Resource profile
+    And content is HAL
     And has links
       | rel                                                  | href                     | title                    |
       | https://level3.rest/patterns/list/editable#add-entry | /registry/register-event | Register an Entity Event |
@@ -27,9 +28,10 @@ Feature: Registry
     Then has L3 Home profile
     And has L3 List Resource profile
     And has L3 Entry Resource profile
+    And content is HAL
     And has links
-      | rel                                                  | href                     | title                    |
-      | https://level3.rest/patterns/list/editable#add-entry | /registry/register-event | Register an Entity Event |
+      | rel                                                  | href                     | title                    | profile                           |
+      | https://level3.rest/patterns/list/editable#add-entry | /registry/register-event | Register an Entity Event | https://level3.rest/profiles/form |
 
 
   Scenario: Examine an entity event
@@ -40,6 +42,10 @@ Feature: Registry
     And follows list entry with name 'Registration Tested'
     Then has L3 Data profile
     And has L3 Entry Resource profile
+    And content is HAL
+    And has links
+      | rel          | href    | title                               | profile                           |
+      | append-event | /append | API to append an event to a ledger. | https://level3.rest/profiles/form |
 
 
   Scenario: Delete an entity event

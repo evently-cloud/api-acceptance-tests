@@ -5,6 +5,10 @@ import {bearerAuth, Ketting, Link, Resource} from "ketting"
 import {Workspace} from "./workspace"
 
 
+type ProfileLink = Link & {
+  profile?: string
+}
+
 
 @binding([Workspace])
 export class Fetch {
@@ -167,14 +171,18 @@ export class Fetch {
   public async hasLinks(data: DataTable) {
     const state = await this.fetch()
     const {links: actual} = state
-    const expected: Link[] = data.hashes()
-    for (const {rel, href, title} of expected) {
-      const actualLink = actual.get(rel)
+    const expected: ProfileLink[] = data.hashes()
+    for (const {rel, href, title, profile} of expected) {
+      const actualLink = actual.get(rel) as ProfileLink
       assert.ok(actualLink, `missing link ${rel}`)
-      const {href: actualHref, title: actualTitle} = actualLink
-      assert.equal(href, actualHref, "Wrong link HREF")
+      const {href: actualHref, title: actualTitle, profile: actualProfile} = actualLink
+      assert.equal(href, actualHref, "Wrong Link HREF")
       if (title) {
-        assert.equal(title, actualTitle, "wrong link TITLE")
+        assert.equal(title, actualTitle, "Wrong Link TITLE")
+      }
+      if (profile) {
+        assert.ok(actualProfile, "Missing Link PROFILE")
+        assert.equal(profile, actualProfile, "Wrong Link PROFILE")
       }
     }
   }

@@ -9,9 +9,9 @@ Feature: Ledgers
     And body has number field 'count'
     And body has field 'name' with value 'acceptance tests'
     And has links
-      | rel       | href              | title                                                                       |
-      | reset     | /ledgers/reset    | Reset the ledger's events. Provides a form to submit as the reset request.  |
-      | download  | /ledgers/download | Download the ledger's events.                                               |
+      | rel       | href              | title                                                                       | profile                             |
+      | reset     | /ledgers/reset    | Reset the ledger's events. Provides a form to submit as the reset request.  | https://level3.rest/profiles/form   |
+      | download  | /ledgers/download | Download the ledger's events.                                               | https://level3.rest/profiles/lookup |
 
 
     Scenario: Discover reset ledger
