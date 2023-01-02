@@ -20,6 +20,13 @@ Feature: Registry
     Then registers event 'Registration Tested' in entity 'tests'
 
 
+  Scenario: Register the Event type again is OK
+    Given Authenticated Client starts at root
+    And follows rel 'registry'
+    And follows rel 'register'
+    Then registers event 'Registration Tested' in entity 'tests'
+
+
   Scenario: Examine an entity
     Given Authenticated Client starts at root
     And follows rel 'registry'

@@ -6,11 +6,11 @@ Feature: Look Around
     Then content is HAL
     And has L3 Home profile
     And has links
-      | rel       | href          | title                                     | profile                           |
-      | append    | /append       | Append events to the ledger.              | https://level3.rest/profiles/home |
-      | ledgers   | /ledgers      | Download or reset ledger events.          | https://level3.rest/profiles/home |
-      | registry  | /registry     | Register entity events for the ledger.    | https://level3.rest/profiles/home |
-      | selectors | /selectors    | Selects events to replay from the ledger. | https://level3.rest/profiles/home |
+      | rel       | href        | title                                 | profile                           |
+      | append    | /append     | Append Events to the Ledger           | https://level3.rest/profiles/home |
+      | ledgers   | /ledgers    | Manage the Ledger                     | https://level3.rest/profiles/home |
+      | registry  | /registry   | Register Entity Events for the Ledger | https://level3.rest/profiles/home |
+      | selectors | /selectors  | Selects Events From the Ledger        | https://level3.rest/profiles/home |
 
 
   #########
@@ -23,11 +23,10 @@ Feature: Look Around
     Then content is HAL
     And has L3 Home profile
     And has links
-      | rel     | href            | title                                                                                         | profile                           |
-      | factual | /append/fact    | Append factual events to a ledger. Factual events cannot be rejected from the ledger.         | https://level3.rest/profiles/form |
-      | serial  | /append/serial  | Append event to an entity if no other events have been appended after a known previous event. | https://level3.rest/profiles/form |
-      | atomic  | /append/atomic  | Atomically append an event only if a selector has no new events.                              | https://level3.rest/profiles/form |
-
+      | rel     | href            | title                                               | profile                           |
+      | factual | /append/fact    | Append Factual Events                               | https://level3.rest/profiles/form |
+      | serial  | /append/serial  | Append Serial Events to an Entity                   | https://level3.rest/profiles/form |
+      | atomic  | /append/atomic  | Atomically Append Events Given a Selector Condition | https://level3.rest/profiles/form |
 
 
   Scenario: Append Fact Resource
@@ -75,9 +74,9 @@ Feature: Look Around
     Then has L3 Home profile
     And content is HAL
     And has links
-      | rel       | href                      | title                       | profile                           |
-      | register  | /registry/register-event  | Register an Event           | https://level3.rest/profiles/form |
-      | entities  | /registry/entities        | Entity and Event Registry   | https://level3.rest/profiles/home |
+      | rel       | href                      | title                           | profile                           |
+      | register  | /registry/register-event  | Register an Event               | https://level3.rest/profiles/form |
+      | entities  | /registry/entities        | Entities With Registered Events | https://level3.rest/profiles/home |
 
 
   Scenario: Register Event Resource
@@ -88,8 +87,8 @@ Feature: Look Around
     And has L3 Add Entry Resource profile
     And content is JSON Schema
     And has links
-      | rel                                                     | href               | title                            |
-      | https://level3.rest/patterns/list/editable#adds-to-list | /registry/entities | Adds event types to this entity. |
+      | rel                                                     | href                | title                                    |
+      | https://level3.rest/patterns/list/editable#adds-to-list | /registry/entities  | List of Entities With Registered Events  |
 
 
   Scenario: Entities Registry Resource requires Authorization
@@ -109,9 +108,9 @@ Feature: Look Around
     Then has L3 Home profile
     And content is HAL
     And has links
-      | rel    | href              | title                                | profile                           |
-      | replay | /selectors/replay | Replay entity events                 | https://level3.rest/profiles/form |
-      | filter | /selectors/filter | Filter events by meta and event data | https://level3.rest/profiles/form |
+      | rel     | href               | title                              | profile                             |
+      | replay  | /selectors/replay  | Replay an Entity's Events          | https://level3.rest/profiles/lookup |
+      | filter  | /selectors/filter  | Select Events With a Filter Query  | https://level3.rest/profiles/lookup |
 
 
   Scenario: Create Replay Selector Resource requires Authorization
