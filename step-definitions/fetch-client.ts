@@ -80,12 +80,42 @@ export class Fetch {
   }
 
 
+  @then(/POSTs '(.+)'/)
+  public async postData(dataIn: string) {
+    return this.postAndFollow(JSON.parse(dataIn))
+  }
+
+
+  @then(/appends '(.+)\/(.+)' event with meta '(.+)' and data '(.+)'/)
+  public async appendFact(entity: string, event: string, metaIn: string, dataIn: string) {
+    const appendEvent = {
+      entity,
+      key: "1",
+      event,
+      meta: JSON.parse(metaIn),
+      data: JSON.parse(dataIn)
+    }
+    await this.postAndFollow(appendEvent)
+  }
+
+
   @then(/deletes the resource/)
   public async deleteResource() {
     try {
       await this.resource.delete()
     } catch (err: any) {
       assert.fail(err)
+    }
+  }
+
+
+  @then(/fails to delete the resource because of status (\d+)/)
+  public async failDeleteResource(expectedStatus: number) {
+    try {
+      await this.resource.delete()
+      assert.fail("should not be able to delete")
+    } catch (err: any) {
+      assert.ok(err.response.status === expectedStatus, "wrong failure on delete")
     }
   }
 
