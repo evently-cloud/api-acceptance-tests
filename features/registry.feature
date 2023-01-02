@@ -51,8 +51,8 @@ Feature: Registry
     And has L3 Entry Resource profile
     And content is HAL
     And has links
-      | rel          | href    | title                               | profile                           |
-      | append-event | /append | API to append an event to a ledger. | https://level3.rest/profiles/form |
+      | rel           | href    | title             | profile                           |
+      | append-event  | /append | Append Events API | https://level3.rest/profiles/form |
 
 
   Scenario: Cannot delete an event type when ledger has events using it
