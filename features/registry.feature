@@ -13,18 +13,9 @@ Feature: Registry
       | https://level3.rest/patterns/list/editable#add-entry | /registry/register-event | Register an Entity Event | https://level3.rest/profiles/form |
 
 
-  Scenario: Register an Event type
-    Given Authenticated Client starts at root
-    And follows rel 'registry'
-    And follows rel 'register'
-    Then registers event 'Registration Tested' in entity 'tests'
-
-
-  Scenario: Register the Event type again is OK
-    Given Authenticated Client starts at root
-    And follows rel 'registry'
-    And follows rel 'register'
-    Then registers event 'Registration Tested' in entity 'tests'
+  Scenario: Register an Event type twice is OK
+    Given Authenticated Client registers event 'Registration Tested' in entity 'tests'
+    Then Authenticated Client registers event 'Registration Tested' in entity 'tests'
 
 
   Scenario: Examine an entity
@@ -56,10 +47,7 @@ Feature: Registry
 
 
   Scenario: Cannot delete an event type when ledger has events using it
-    Given Authenticated Client starts at root
-    And follows rel 'append'
-    And follows rel 'factual'
-    And appends 'tests/Registration Tested' event with meta '{}' and data '{"msg":"just a test"}'
+    Given Authenticated Client appends 'tests/Registration Tested' factual event with meta '{}' and data '{"msg":"just a test"}'
     And Authenticated Client starts at root
     And follows rel 'registry'
     And follows rel 'entities'
@@ -68,10 +56,7 @@ Feature: Registry
     Then fails to delete the resource because of status 422
 
   Scenario: Delete an entity event type
-    Given Authenticated Client starts at root
-    And follows rel 'ledgers'
-    And follows rel 'reset'
-    And POSTs '{}'
+    Given Authenticated Client resets ledger
     And Authenticated Client starts at root
     And follows rel 'registry'
     And follows rel 'entities'

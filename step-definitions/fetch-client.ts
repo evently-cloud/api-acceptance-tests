@@ -21,6 +21,9 @@ export class Fetch {
   // @ts-ignore
   private resource: Resource
 
+  private appendedEvent: any = null
+  private lastEventId: string = ""
+
 
   public constructor(protected workspace: Workspace) {
     this.noauthKetting = new Ketting(workspace.eventlyUrl)
@@ -86,8 +89,29 @@ export class Fetch {
   }
 
 
-  @then(/appends '(.+)\/(.+)' event with meta '(.+)' and data '(.+)'/)
-  public async appendFact(entity: string, event: string, metaIn: string, dataIn: string) {
+  @then(/Authenticated Client resets ledger/)
+  public async resetLedger() {
+    const reset = await this.authKetting.go("/")
+      .follow("ledgers")
+      .follow("reset")
+
+    await reset.post({data: {}})
+  }
+
+
+  @then(/resets ledger to remembered event id/)
+  public async resetLedgerToRememberedEvent() {
+    assert.ok(this.lastEventId, "last event id not remembered")
+    const reset = await this.authKetting.go("/")
+      .follow("ledgers")
+      .follow("reset")
+
+    await reset.post({data: {after: this.lastEventId}})
+  }
+
+
+  @then(/Authenticated Client appends '(.+)\/(.+)' factual event with meta '(.+)' and data '(.+)'/)
+  public async appendEvent(entity: string, event: string, metaIn: string, dataIn: string) {
     const appendEvent = {
       entity,
       key: "1",
@@ -95,7 +119,20 @@ export class Fetch {
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
-    await this.postAndFollow(appendEvent)
+
+    const factAppender = await this.authKetting.go("/")
+      .follow("append")
+      .follow("factual")
+
+    const appendResult = await factAppender.post({data: appendEvent})
+
+    this.appendedEvent = appendResult.data
+  }
+
+
+  @then(/remembers last event id/)
+  public async rememberLastEventId() {
+    this.lastEventId = this.appendedEvent.eventId
   }
 
 
@@ -243,19 +280,26 @@ export class Fetch {
   public async bodyHasFieldWithValue(field: string, expectedValue: any) {
     const state = await this.fetch()
     const actualValue = state.data[field]
-    assert.notEqual(actualValue, undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
-    assert.equal(expectedValue, actualValue, `wrong value for field '${field}'`)
+    assert.ok(actualValue, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
+    assert.equal(expectedValue, actualValue, `wrong value for field '${field}'. Expected ${JSON.stringify(expectedValue)}, found ${JSON.stringify(actualValue)}`)
   }
 
 
-  @then(/registers event '(.+)' in entity '(.+)'/)
+  @then(/Authenticated Client registers event '(.+)' in entity '(.+)'/)
   public async registerEvent(event: string, entity: string) {
-    const form = {
+    const data = {
       entity,
       event
     }
-    await this.postAndFollow(form)
-    const state = await this.fetch()
+
+    const registrar = await this.authKetting.go("/")
+      .follow("registry")
+      .follow("register")
+
+    const registered = await registrar.postFollow({data})
+
+    const state = await registered.get()
+
     const {entity: actualEntity, event: actualEvent} = state.data
     assert.equal(entity, actualEntity, "not the same entity")
     assert.equal(event, actualEvent, "not the same event")
