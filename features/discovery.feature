@@ -31,24 +31,21 @@ Feature: Look Around
 
   Scenario: Append Fact Resource
     Given Client starts at root
-    And follows rel 'append'
-    And follows rel 'factual'
+    And follows rels 'append,factual'
     Then has L3 Form profile
     And content is JSON Schema
 
 
   Scenario: Append Serial Resource
     Given Client starts at root
-    And follows rel 'append'
-    And follows rel 'serial'
+    And follows rels 'append,serial'
     Then has L3 Form profile
     And content is JSON Schema
 
 
   Scenario: Append Atomic Resource
     Given Client starts at root
-    And follows rel 'append'
-    And follows rel 'atomic'
+    And follows rels 'append,atomic'
     Then has L3 Form profile
     And content is JSON Schema
 
@@ -81,8 +78,7 @@ Feature: Look Around
 
   Scenario: Register Event Resource
     Given Client starts at root
-    And follows rel 'registry'
-    And follows rel 'register'
+    And follows rels 'registry,register'
     Then has L3 Form profile
     And has L3 Add Entry Resource profile
     And content is JSON Schema
@@ -93,8 +89,7 @@ Feature: Look Around
 
   Scenario: Entities Registry Resource requires Authorization
     Given Client starts at root
-    And follows rel 'registry'
-    And follows rel 'entities'
+    And follows rels 'registry,entities'
     Then Client is not authorized
 
 
@@ -115,13 +110,11 @@ Feature: Look Around
 
   Scenario: Create Replay Selector Resource requires Authorization
     Given Client starts at root
-    And follows rel 'selectors'
-    And follows rel 'replay'
+    And follows rels 'selectors,replay'
     Then Client is not authorized
 
 
   Scenario: Create Filter Selector Resource requires Authorization
     Given Client starts at root
-    And follows rel 'selectors'
-    And follows rel 'filter'
+    And follows rels 'selectors,filter'
     Then Client is not authorized

@@ -73,6 +73,15 @@ export class Fetch {
   }
 
 
+  @given(/follows rels '(.+)'/)
+  public async followRels(rels: string) {
+    const relList = rels.split(",")
+    for (const rel of relList) {
+      await this.followRel(rel)
+    }
+  }
+
+
   @then(/follows list entry with name '(.+)'/)
   public async followListEntry(name: string) {
     const entryLinks = await this.resource.links("https://level3.rest/patterns/list#list-entry")

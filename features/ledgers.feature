@@ -16,16 +16,14 @@ Feature: Ledgers
 
     Scenario: Discover reset ledger
       Given Authenticated Client starts at root
-      And follows rel 'ledgers'
-      And follows rel 'reset'
+      And follows rels 'ledgers,reset'
       Then has L3 Form profile
       And content is JSON Schema
 
 
     Scenario: Discover download ledger
       Given Authenticated Client starts at root
-      And follows rel 'ledgers'
-      And follows rel 'download'
+      And follows rels 'ledgers,download'
       Then has L3 Lookup profile
       And has L3 Representation profile
       And content is JSON Schema

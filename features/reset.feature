@@ -1,9 +1,4 @@
-# Resets to a previous event (which?)
-# Appends again, counts
-# Resets all
-# Count = 0
-
-Feature: Reset ledgers
+Feature: Reset ledger
   Tests resetting a ledger to a specific point
 
   Scenario: Reset Events to a known place

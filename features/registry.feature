@@ -3,8 +3,7 @@ Feature: Registry
 
   Scenario: Discover registry
     Given Authenticated Client starts at root
-    And follows rel 'registry'
-    And follows rel 'entities'
+    And follows rels 'registry,entities'
     Then has L3 Home profile
     And has L3 List Resource profile
     And content is HAL
@@ -20,8 +19,7 @@ Feature: Registry
 
   Scenario: Examine an entity
     Given Authenticated Client starts at root
-    And follows rel 'registry'
-    And follows rel 'entities'
+    And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     Then has L3 Home profile
     And has L3 List Resource profile
@@ -34,8 +32,7 @@ Feature: Registry
 
   Scenario: Examine an entity event
     Given Authenticated Client starts at root
-    And follows rel 'registry'
-    And follows rel 'entities'
+    And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
     Then has L3 Data profile
@@ -49,8 +46,7 @@ Feature: Registry
   Scenario: Cannot delete an event type when ledger has events using it
     Given Authenticated Client appends 'tests/Registration Tested' factual event with meta '{}' and data '{"msg":"just a test"}'
     And Authenticated Client starts at root
-    And follows rel 'registry'
-    And follows rel 'entities'
+    And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
     Then fails to delete the resource because of status 422
@@ -58,8 +54,7 @@ Feature: Registry
   Scenario: Delete an entity event type
     Given Authenticated Client resets ledger
     And Authenticated Client starts at root
-    And follows rel 'registry'
-    And follows rel 'entities'
+    And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
     Then deletes the resource
