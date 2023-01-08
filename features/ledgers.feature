@@ -1,9 +1,11 @@
 Feature: Ledgers
   Test ledger resources
 
-  Scenario: Discover ledgers
+  Background:
     Given Authenticated Client starts at root
-    And follows rel 'ledgers'
+
+  Scenario: Discover ledgers
+    Given follows rel 'ledgers'
     Then has L3 Home profile
     And content is HAL
     And body has number field 'count'
@@ -15,15 +17,13 @@ Feature: Ledgers
 
 
     Scenario: Discover reset ledger
-      Given Authenticated Client starts at root
-      And follows rels 'ledgers,reset'
+      Given follows rels 'ledgers,reset'
       Then has L3 Form profile
       And content is JSON Schema
 
 
     Scenario: Discover download ledger
-      Given Authenticated Client starts at root
-      And follows rels 'ledgers,download'
+      Given follows rels 'ledgers,download'
       Then has L3 Lookup profile
       And has L3 Representation profile
       And content is JSON Schema

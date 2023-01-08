@@ -1,8 +1,10 @@
 Feature: Look Around
   Test the non-authenticated endpoints
 
-  Scenario: Root Resource
+  Background:
     Given Client starts at root
+
+  Scenario: Root Resource
     Then content is HAL
     And has L3 Home profile
     And has links
@@ -18,8 +20,7 @@ Feature: Look Around
   #########
 
   Scenario: Append Resource
-    Given Client starts at root
-    And follows rel 'append'
+    Given follows rel 'append'
     Then content is HAL
     And has L3 Home profile
     And has links
@@ -30,22 +31,19 @@ Feature: Look Around
 
 
   Scenario: Append Fact Resource
-    Given Client starts at root
-    And follows rels 'append,factual'
+    Given follows rels 'append,factual'
     Then has L3 Form profile
     And content is JSON Schema
 
 
   Scenario: Append Serial Resource
-    Given Client starts at root
-    And follows rels 'append,serial'
+    Given follows rels 'append,serial'
     Then has L3 Form profile
     And content is JSON Schema
 
 
   Scenario: Append Atomic Resource
-    Given Client starts at root
-    And follows rels 'append,atomic'
+    Given follows rels 'append,atomic'
     Then has L3 Form profile
     And content is JSON Schema
 
@@ -55,8 +53,7 @@ Feature: Look Around
   #########
 
   Scenario: Ledgers Resource requires Authorization
-    Given Client starts at root
-    And follows rel 'ledgers'
+    Given follows rel 'ledgers'
     Then Client is not authorized
 
 
@@ -66,8 +63,7 @@ Feature: Look Around
   ##########
 
   Scenario: Registry Resource
-    Given Client starts at root
-    And follows rel 'registry'
+    Given follows rel 'registry'
     Then has L3 Home profile
     And content is HAL
     And has links
@@ -77,8 +73,7 @@ Feature: Look Around
 
 
   Scenario: Register Event Resource
-    Given Client starts at root
-    And follows rels 'registry,register'
+    Given follows rels 'registry,register'
     Then has L3 Form profile
     And has L3 Add Entry Resource profile
     And content is JSON Schema
@@ -88,8 +83,7 @@ Feature: Look Around
 
 
   Scenario: Entities Registry Resource requires Authorization
-    Given Client starts at root
-    And follows rels 'registry,entities'
+    Given follows rels 'registry,entities'
     Then Client is not authorized
 
 
@@ -98,8 +92,7 @@ Feature: Look Around
   ###########
 
   Scenario: Selectors Resource
-    Given Client starts at root
-    And follows rel 'selectors'
+    Given follows rel 'selectors'
     Then has L3 Home profile
     And content is HAL
     And has links
@@ -109,12 +102,10 @@ Feature: Look Around
 
 
   Scenario: Create Replay Selector Resource requires Authorization
-    Given Client starts at root
-    And follows rels 'selectors,replay'
+    Given follows rels 'selectors,replay'
     Then Client is not authorized
 
 
   Scenario: Create Filter Selector Resource requires Authorization
-    Given Client starts at root
-    And follows rels 'selectors,filter'
+    Given follows rels 'selectors,filter'
     Then Client is not authorized
