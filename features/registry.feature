@@ -44,7 +44,7 @@ Feature: Registry
 
 
   Scenario: Cannot delete an event type when ledger has events using it
-    Given Authenticated Client appends 'tests/Registration Tested' factual event with meta '{}' and data '{"msg":"just a test"}'
+    Given Authenticated Client appends fact 'tests/Registration Tested', key 'a', meta '{}' and data '{"msg":"just a test"}'
     And Authenticated Client starts at root
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'

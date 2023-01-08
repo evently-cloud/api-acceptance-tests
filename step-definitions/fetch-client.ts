@@ -1,12 +1,20 @@
 import {DataTable} from "@cucumber/cucumber"
 import assert from "assert"
 import {binding, given, then} from "cucumber-tsflow"
-import {bearerAuth, Ketting, Link, Resource} from "ketting"
+import {bearerAuth, Ketting, Link, Resource, State} from "ketting"
 import {Workspace} from "./workspace"
 
 
 type ProfileLink = Link & {
   profile?: string
+}
+
+type Event = {
+  entity: string,
+  event:  string,
+  key:    string,
+  meta:   string,
+  data:   string
 }
 
 
@@ -20,9 +28,10 @@ export class Fetch {
 
   // @ts-ignore
   private resource: Resource
-
   private appendedEvent: any = null
   private lastEventId: string = ""
+  private selectedEvents: Event[] = []
+
 
 
   public constructor(protected workspace: Workspace) {
@@ -50,6 +59,15 @@ export class Fetch {
     const missing = allows.filter((m) => !methods.includes(m))
     assert.ok(!missing.length, `allow header missing methods: ${missing}`)
     assert.ok(!extra.length, `allow header has extra methods: ${extra}`)
+  }
+
+
+  private async parseNdJsonFromState(state: State): Promise<Event[]> {
+    const ndJson = await state.data.text()
+    return ndJson
+      .split("\n")
+      .filter((r: string) => r.length)
+      .map(JSON.parse)
   }
 
 
@@ -119,11 +137,11 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client appends '(.+)\/(.+)' factual event with meta '(.+)' and data '(.+)'/)
-  public async appendEvent(entity: string, event: string, metaIn: string, dataIn: string) {
+  @then(/Authenticated Client appends fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
+  public async appendFactEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
       entity,
-      key: "1",
+      key,
       event,
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
@@ -136,6 +154,60 @@ export class Fetch {
     const appendResult = await factAppender.post({data: appendEvent})
 
     this.appendedEvent = appendResult.data
+  }
+
+
+  @then(/Authenticated Client appends facts/)
+  public async appendFacts(dataIn: DataTable) {
+    const appendRows: Event[] = dataIn.hashes()
+    for (const {entity, event, key, meta, data} of appendRows) {
+      await this.appendFactEvent(entity, event, key, meta, data)
+    }
+  }
+
+
+  @then(/Authenticated Client replays all events for '(.+)', keys '(.+)'/)
+  public async replayAllEvents(entity: string, keysIn: string) {
+    const selector = await this.authKetting.go("/")
+      .follow("selectors")
+      .follow("replay")
+
+    const keys = keysIn.split(",")
+    const data = {
+      entity,
+      keys
+    }
+
+    const state = await selector.post({data})
+
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @then(/Authenticated Client replays '(.+)' events for '(.+)', keys '(.+)'/)
+  public async replaySpecificEvents(eventsIn: string, entity: string, keysIn: string) {
+    const selector = await this.authKetting.go("/")
+      .follow("selectors")
+      .follow("replay")
+
+    const events = eventsIn.split(",")
+    const keys = keysIn.split(",")
+    const data = {
+      entity,
+      events,
+      keys
+    }
+
+    const state = await selector.post({data})
+
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @then(/Event count is '(\d+)'/)
+  public async countSelectedEvents(expectedCount: number) {
+    // deduct footer row from event count
+    assert.equal(this.selectedEvents.length - 1, expectedCount)
   }
 
 
