@@ -5,7 +5,7 @@ Feature: Reset ledger
     Given Authenticated Client resets ledger
     And Authenticated Client registers event 'Thing Created' in entity 'tests'
     And Authenticated Client appends fact 'tests/Thing Created', key '1', meta '{}' and data '{"name":1}'
-    And remembers last event id
+    And remembers last appended event id
     And Authenticated Client appends fact 'tests/Thing Created', key '1', meta '{}' and data '{"name":2}'
     And Authenticated Client starts at root
     And follows rel 'ledgers'

@@ -32,6 +32,15 @@ Feature: Selectors
     Given Authenticated Client replays 'Ball Returned,Ball Out' events for 'Tennis Match', keys '2023-01-07,2023-01-09'
     Then Event count is '5'
 
+  Scenario: Replay Events after a known Event
+    Given Authenticated Client replays 'Match Started' events for 'Tennis Match', keys '2023-01-09'
+    And remembers selector mark
+    When Authenticated Client replays all 'Tennis Match' events, key '2023-01-09' after remembered selector mark
+    Then Event count is '3'
+
+  # limit
+
+
   #test filter selectors
   ## meta
   ## data

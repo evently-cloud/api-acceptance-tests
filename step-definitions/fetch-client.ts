@@ -1,8 +1,12 @@
-import {DataTable} from "@cucumber/cucumber"
+import {DataTable, setDefaultTimeout} from "@cucumber/cucumber"
 import assert from "assert"
 import {binding, given, then} from "cucumber-tsflow"
 import {bearerAuth, Ketting, Link, Resource, State} from "ketting"
 import {Workspace} from "./workspace"
+
+
+// ten minutes
+setDefaultTimeout(600 * 1000);
 
 
 type ProfileLink = Link & {
@@ -30,6 +34,7 @@ export class Fetch {
   private resource: Resource
   private appendedEvent: any = null
   private lastEventId: string = ""
+  private selectorMark: string = ""
   private selectedEvents: Event[] = []
 
 
@@ -204,6 +209,23 @@ export class Fetch {
   }
 
 
+  @then(/Authenticated Client replays all '(.+)' events, key '(.+)' after remembered selector mark/)
+  public async replayAfterRememberedEvent(entity: string, key: string) {
+    const selector = await this.authKetting.go("/")
+      .follow("selectors")
+      .follow("replay")
+    const data = {
+      entity,
+      keys: [key],
+      after: this.selectorMark
+    }
+
+    const state = await selector.post({data})
+
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
   @then(/Event count is '(\d+)'/)
   public async countSelectedEvents(expectedCount: number) {
     // deduct footer row from event count
@@ -211,9 +233,16 @@ export class Fetch {
   }
 
 
-  @then(/remembers last event id/)
-  public async rememberLastEventId() {
+  @then(/remembers last appended event id/)
+  public async rememberLastAppendedEventId() {
     this.lastEventId = this.appendedEvent.eventId
+  }
+
+
+  @then(/remembers selector mark/)
+  public async rememberSelectorMark() {
+    // @ts-ignore  Last 'event' is actually the footer
+    this.selectorMark = this.selectedEvents.at(-1)?.mark
   }
 
 
