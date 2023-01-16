@@ -261,6 +261,13 @@ export class Fetch {
   }
 
 
+  private downloadResource() {
+    return this.authKetting.go("/")
+      .follow("ledgers")
+      .follow("download")
+  }
+
+
   @given(/Authenticated Client filters '(.+)' events with meta filter '(.+)'/)
   public async filterEventsByMeta(entitiesIn: string, meta: string) {
     const selector = await this.filterSelectorResource()
@@ -350,17 +357,33 @@ export class Fetch {
   }
 
 
+  @given(/Authenticated Client downloads entire ledger/)
+  public async downloadAll() {
+    const download = await this.downloadResource()
+    const state = await download.post({data: {}})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
   @then(/Event count is (\d+)/)
   public async countSelectedEvents(expectedCount: number) {
     // deduct footer row from event count
-    assert.equal(this.selectedEvents.length - 1, expectedCount)
+    const lastRow = this.selectedEvents.at(-1)
+    const length = this.selectedEvents.length
+    const count = lastRow?.event
+      ? length
+      : length - 1
+    assert.equal(count, expectedCount)
   }
 
 
   @then(/last Event is '(.+)'/)
-  public async lastEventIs(event: string) {
-    const lastEvent = this.selectedEvents.at(-2)
-    assert.equal(lastEvent?.event, event)
+  public async lastEventIs(expectedEvent: string) {
+    const lastRow = this.selectedEvents.at(-1)
+    const lastEvent = lastRow?.event
+      ? lastRow
+      : this.selectedEvents.at(-2)
+    assert.equal(lastEvent?.event, expectedEvent)
   }
 
 
@@ -484,13 +507,13 @@ export class Fetch {
       const actualLink = actual.get(rel) as ProfileLink
       assert.ok(actualLink, `missing link ${rel}`)
       const {href: actualHref, title: actualTitle, profile: actualProfile} = actualLink
-      assert.equal(href, actualHref, "Wrong Link HREF")
+      assert.equal(actualHref, href, "Wrong Link HREF")
       if (title) {
-        assert.equal(title, actualTitle, "Wrong Link TITLE")
+        assert.equal(actualTitle, title, "Wrong Link TITLE")
       }
       if (profile) {
         assert.ok(actualProfile, "Missing Link PROFILE")
-        assert.equal(profile, actualProfile, "Wrong Link PROFILE")
+        assert.equal(actualProfile, profile, "Wrong Link PROFILE")
       }
     }
   }
@@ -513,7 +536,7 @@ export class Fetch {
     const actualValue = state.data[field]
     assert.notEqual(actualValue, undefined, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
     const actualType = typeof actualValue
-    assert.equal(expectedType, actualType, `wrong type for ${actualValue}`)
+    assert.equal(actualType, expectedType, `wrong type for ${actualValue}`)
   }
 
 
@@ -522,7 +545,7 @@ export class Fetch {
     const state = await this.fetch()
     const actualValue = state.data[field]
     assert.ok(actualValue, `body missing '${field}' field: ${JSON.stringify(state.data)}`)
-    assert.equal(expectedValue, actualValue, `wrong value for field '${field}'. Expected ${JSON.stringify(expectedValue)}, found ${JSON.stringify(actualValue)}`)
+    assert.equal(actualValue, expectedValue, `wrong value for field '${field}'. Expected ${JSON.stringify(expectedValue)}, found ${JSON.stringify(actualValue)}`)
   }
 
 
@@ -542,7 +565,7 @@ export class Fetch {
     const state = await registered.get()
 
     const {entity: actualEntity, event: actualEvent} = state.data
-    assert.equal(entity, actualEntity, "not the same entity")
-    assert.equal(event, actualEvent, "not the same event")
+    assert.equal(actualEntity, entity, "not the same entity")
+    assert.equal(actualEvent, event, "not the same event")
   }
 }

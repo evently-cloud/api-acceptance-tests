@@ -7,7 +7,7 @@ Feature: Selectors
     And Authenticated Client registers event 'Ball Served' in entity 'Tennis Match'
     And Authenticated Client registers event 'Ball Returned' in entity 'Tennis Match'
     And Authenticated Client registers event 'Ball Out' in entity 'Tennis Match'
-    And Authenticated Client appends facts
+    Then Authenticated Client appends facts
       | entity        | event         | key         | meta            | data                          |
       | Tennis Match  | Match Started | 2023-01-07  | {"command": 1}  | {"players": ["Kal", "Char"]}  |
       | Tennis Match  | Ball Served   | 2023-01-07  | {"command": 2}  | {"player": "Kal"}             |
