@@ -59,7 +59,8 @@ export class Fetch {
 
   private assertOnlyAllows(headers: Headers, methods: string[]) {
     const allowHeader = headers.get("allow") || ""
-    const allows = allowHeader.split(",").map((m) => m.trim().toUpperCase())
+    const allows = this.toList(allowHeader)
+      .map((m) => m.toUpperCase())
     const extra = methods.filter((m) => !allows.includes(m))
     const missing = allows.filter((m) => !methods.includes(m))
     assert.ok(!missing.length, `allow header missing methods: ${missing}`)
@@ -73,6 +74,13 @@ export class Fetch {
       .split("\n")
       .filter((r: string) => r.length)
       .map(JSON.parse)
+  }
+
+
+  private toList(input: string): string[] {
+    return input
+      .split(",")
+      .map((s) => s.trim())
   }
 
 
@@ -98,7 +106,7 @@ export class Fetch {
 
   @given(/follows rels '(.+)'/)
   public async followRels(rels: string) {
-    const relList = rels.split(",")
+    const relList = this.toList(rels)
     for (const rel of relList) {
       await this.followRel(rel)
     }
@@ -177,7 +185,7 @@ export class Fetch {
       .follow("selectors")
       .follow("replay")
 
-    const keys = keysIn.split(",")
+    const keys = this.toList(keysIn)
     const data = {
       entity,
       keys
@@ -195,16 +203,14 @@ export class Fetch {
       .follow("selectors")
       .follow("replay")
 
-    const events = eventsIn.split(",")
-    const keys = keysIn.split(",")
+    const events = this.toList(eventsIn)
+    const keys = this.toList(keysIn)
     const data = {
       entity,
       events,
       keys
     }
-
     const state = await selector.post({data})
-
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
 
@@ -219,17 +225,54 @@ export class Fetch {
       keys: [key],
       after: this.selectorMark
     }
-
     const state = await selector.post({data})
-
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
 
 
-  @then(/Event count is '(\d+)'/)
+  @then(/Authenticated Client replays (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
+  public async replayEventsWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
+    const events = this.toList(eventsIn)
+    const keys = this.toList(keysIn)
+    const selector = await this.authKetting.go("/")
+      .follow("selectors")
+      .follow("replay")
+    const data = { entity, keys, events, limit }
+    const state = await selector.post({data})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @then(/Authenticated Client replays, after remembered selector mark, (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
+  public async replayEventsAfterMarkWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
+    const events = this.toList(eventsIn)
+    const keys = this.toList(keysIn)
+    const selector = await this.authKetting.go("/")
+      .follow("selectors")
+      .follow("replay")
+    const data = {
+      entity,
+      keys,
+      events,
+      limit,
+      after: this.selectorMark
+    }
+    const state = await selector.post({data})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @then(/Event count is (\d+)/)
   public async countSelectedEvents(expectedCount: number) {
     // deduct footer row from event count
     assert.equal(this.selectedEvents.length - 1, expectedCount)
+  }
+
+
+  @then(/last Event is '(.+)'/)
+  public async lastEventIs(event: string) {
+    const lastEvent = this.selectedEvents.at(-2)
+    assert.equal(lastEvent?.event, event)
   }
 
 
