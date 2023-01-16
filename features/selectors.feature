@@ -48,16 +48,30 @@ Feature: Selectors
   Scenario: Replay limited number of events after a known Event
     Given Authenticated Client replays 'Ball Served' events for 'Tennis Match', keys '2023-01-07'
     And remembers selector mark
-    Given Authenticated Client replays, after remembered selector mark, 5 'Ball Served, Ball Returned, Ball Out' events from 'Tennis Match', keys '2023-01-07, 2023-01-09'
+    When Authenticated Client replays, after remembered selector mark, 5 'Ball Served, Ball Returned, Ball Out' events from 'Tennis Match', keys '2023-01-07, 2023-01-09'
     Then Event count is 5
     And last Event is 'Ball Returned'
 
-  #test filter selectors
-
   Scenario: Select all events with meta filter
-  Given Authenticated Client filters 'Tennis Match' events with meta filter '$.command ? (@ % 2 == 0)'
-  Then Event count is 4
-  And last Event is 'Ball Returned'
+    When Authenticated Client filters 'Tennis Match' events with meta filter '$.command ? (@ % 2 == 0)'
+    Then Event count is 4
+    And last Event is 'Ball Returned'
+
+  Scenario: Select subset of events with meta filter
+    Given Authenticated Client replays 'Ball Served' events for 'Tennis Match', keys '2023-01-07'
+    And remembers selector mark
+    Given Authenticated Client filters, after remembered selector mark, 'Tennis Match' events with meta filter '$.command ? (@ % 2 == 0)'
+    Then Event count is 3
+    And last Event is 'Ball Returned'
+
+
+  Scenario: Select subset of events with meta filter after a known event
+    Given Authenticated Client replays 'Ball Served' events for 'Tennis Match', keys '2023-01-07'
+    And remembers selector mark
+    Given Authenticated Client filters, after remembered selector mark, 2 'Tennis Match' events with meta filter '$.command ? (@ % 2 == 0)'
+    Then Event count is 2
+    And last Event is 'Match Started'
+
   ## data
   ## both
   ## after

@@ -278,6 +278,47 @@ export class Fetch {
   }
 
 
+  @given(/Authenticated Client filters, after remembered selector mark, '(.+)' events with meta filter '(.+)'/)
+  public async filterEventsAfterByMeta(entitiesIn: string, meta: string) {
+    const entities = this.toList(entitiesIn)
+    const selector = await this.authKetting.go("/")
+      .follow("selectors")
+      .follow("filter")
+    const data = entities.reduce((acc, e) => {
+      acc[e] = {}
+      return acc
+    }, {} as Record<string, any>)
+    const sendData = {
+      meta,
+      data,
+      after: this.selectorMark
+    }
+    const state = await selector.post({data: sendData})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @given(/Authenticated Client filters, after remembered selector mark, (\d+) '(.+)' events with meta filter '(.+)'/)
+  public async filterLimitedEventsAfterByMeta(limit: number, entitiesIn: string, meta: string) {
+    const entities = this.toList(entitiesIn)
+    const selector = await this.authKetting.go("/")
+      .follow("selectors")
+      .follow("filter")
+    const data = entities.reduce((acc, e) => {
+      acc[e] = {}
+      return acc
+    }, {} as Record<string, any>)
+    const sendData = {
+      meta,
+      data,
+      limit,
+      after: this.selectorMark
+    }
+    const state = await selector.post({data: sendData})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
   @then(/Event count is (\d+)/)
   public async countSelectedEvents(expectedCount: number) {
     // deduct footer row from event count
