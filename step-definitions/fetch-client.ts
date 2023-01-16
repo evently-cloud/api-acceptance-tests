@@ -262,6 +262,22 @@ export class Fetch {
   }
 
 
+  @given(/Authenticated Client filters '(.+)' events with meta filter '(.+)'/)
+  public async filterEventsByMeta(entitiesIn: string, meta: string) {
+    const entities = this.toList(entitiesIn)
+    const selector = await this.authKetting.go("/")
+      .follow("selectors")
+      .follow("filter")
+    const data = entities.reduce((acc, e) => {
+      acc[e] = {}
+      return acc
+    }, {} as Record<string, any>)
+    const sendData = { meta, data }
+    const state = await selector.post({data: sendData})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
   @then(/Event count is (\d+)/)
   public async countSelectedEvents(expectedCount: number) {
     // deduct footer row from event count

@@ -53,7 +53,11 @@ Feature: Selectors
     And last Event is 'Ball Returned'
 
   #test filter selectors
-  ## meta
+
+  Scenario: Select all events with meta filter
+  Given Authenticated Client filters 'Tennis Match' events with meta filter '$.command ? (@ % 2 == 0)'
+  Then Event count is 4
+  And last Event is 'Ball Returned'
   ## data
   ## both
   ## after
