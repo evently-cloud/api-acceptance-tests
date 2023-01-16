@@ -179,30 +179,28 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client replays all events for '(.+)', keys '(.+)'/)
-  public async replayAllEvents(entity: string, keysIn: string) {
-    const selector = await this.authKetting.go("/")
+  private replaySelectorResource() {
+    return this.authKetting.go("/")
       .follow("selectors")
       .follow("replay")
+  }
 
+  @then(/Authenticated Client replays all events for '(.+)', keys '(.+)'/)
+  public async replayAllEvents(entity: string, keysIn: string) {
+    const selector = await this.replaySelectorResource()
     const keys = this.toList(keysIn)
     const data = {
       entity,
       keys
     }
-
     const state = await selector.post({data})
-
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
 
 
   @then(/Authenticated Client replays '(.+)' events for '(.+)', keys '(.+)'/)
   public async replaySpecificEvents(eventsIn: string, entity: string, keysIn: string) {
-    const selector = await this.authKetting.go("/")
-      .follow("selectors")
-      .follow("replay")
-
+    const selector = await this.replaySelectorResource()
     const events = this.toList(eventsIn)
     const keys = this.toList(keysIn)
     const data = {
@@ -217,9 +215,7 @@ export class Fetch {
 
   @then(/Authenticated Client replays all '(.+)' events, key '(.+)' after remembered selector mark/)
   public async replayAfterRememberedEvent(entity: string, key: string) {
-    const selector = await this.authKetting.go("/")
-      .follow("selectors")
-      .follow("replay")
+    const selector = await this.replaySelectorResource()
     const data = {
       entity,
       keys: [key],
@@ -232,11 +228,9 @@ export class Fetch {
 
   @then(/Authenticated Client replays (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
   public async replayEventsWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
+    const selector = await this.replaySelectorResource()
     const events = this.toList(eventsIn)
     const keys = this.toList(keysIn)
-    const selector = await this.authKetting.go("/")
-      .follow("selectors")
-      .follow("replay")
     const data = { entity, keys, events, limit }
     const state = await selector.post({data})
     this.selectedEvents = await this.parseNdJsonFromState(state)
@@ -245,11 +239,9 @@ export class Fetch {
 
   @then(/Authenticated Client replays, after remembered selector mark, (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
   public async replayEventsAfterMarkWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
+    const selector = await this.replaySelectorResource()
     const events = this.toList(eventsIn)
     const keys = this.toList(keysIn)
-    const selector = await this.authKetting.go("/")
-      .follow("selectors")
-      .follow("replay")
     const data = {
       entity,
       keys,
@@ -262,12 +254,17 @@ export class Fetch {
   }
 
 
-  @given(/Authenticated Client filters '(.+)' events with meta filter '(.+)'/)
-  public async filterEventsByMeta(entitiesIn: string, meta: string) {
-    const entities = this.toList(entitiesIn)
-    const selector = await this.authKetting.go("/")
+  private filterSelectorResource() {
+    return this.authKetting.go("/")
       .follow("selectors")
       .follow("filter")
+  }
+
+
+  @given(/Authenticated Client filters '(.+)' events with meta filter '(.+)'/)
+  public async filterEventsByMeta(entitiesIn: string, meta: string) {
+    const selector = await this.filterSelectorResource()
+    const entities = this.toList(entitiesIn)
     const data = entities.reduce((acc, e) => {
       acc[e] = {}
       return acc
@@ -278,19 +275,11 @@ export class Fetch {
   }
 
 
-  @given(/Authenticated Client filters, after remembered selector mark, '(.+)' events with meta filter '(.+)'/)
-  public async filterEventsAfterByMeta(entitiesIn: string, meta: string) {
-    const entities = this.toList(entitiesIn)
-    const selector = await this.authKetting.go("/")
-      .follow("selectors")
-      .follow("filter")
-    const data = entities.reduce((acc, e) => {
-      acc[e] = {}
-      return acc
-    }, {} as Record<string, any>)
+  @given(/Authenticated Client filters, after remembered selector mark, events with meta filter '(.+)'/)
+  public async filterEventsAfterByMeta(meta: string) {
+    const selector = await this.filterSelectorResource()
     const sendData = {
       meta,
-      data,
       after: this.selectorMark
     }
     const state = await selector.post({data: sendData})
@@ -298,23 +287,65 @@ export class Fetch {
   }
 
 
-  @given(/Authenticated Client filters, after remembered selector mark, (\d+) '(.+)' events with meta filter '(.+)'/)
-  public async filterLimitedEventsAfterByMeta(limit: number, entitiesIn: string, meta: string) {
-    const entities = this.toList(entitiesIn)
-    const selector = await this.authKetting.go("/")
-      .follow("selectors")
-      .follow("filter")
-    const data = entities.reduce((acc, e) => {
-      acc[e] = {}
-      return acc
-    }, {} as Record<string, any>)
+  @given(/Authenticated Client filters, after remembered selector mark, (\d+) events with meta filter '(.+)'/)
+  public async filterLimitedEventsAfterByMeta(limit: number, meta: string) {
+    const selector = await this.filterSelectorResource()
     const sendData = {
       meta,
-      data,
       limit,
       after: this.selectorMark
     }
     const state = await selector.post({data: sendData})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  private tableToFilters(table: DataTable) {
+    return table.hashes()
+      .reduce((acc, f) => {
+        const entity = acc[f.entity] || {}
+        if (Object.keys(entity).length === 0) {
+          acc[f.entity] = entity
+        }
+        entity[f.event] = f.filter
+        return acc
+      },
+      {} as Record<string, any>)
+  }
+
+
+  @given(/Authenticated Client filters all data events/)
+  public async filterAllEventsByData(table: DataTable) {
+    const selector = await this.filterSelectorResource()
+    const filters = this.tableToFilters(table)
+    const state = await selector.post({data: {data: filters}})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @given(/Authenticated Client filters data events, after remembered event/)
+  public async filterEventsByDataAfterMark(table: DataTable) {
+    const selector = await this.filterSelectorResource()
+    const filters = this.tableToFilters(table)
+    const state = await selector.post({data: {
+        data: filters,
+        after: this.selectorMark
+      }
+    })
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @given(/Authenticated Client filters (\d+) data events, after remembered event/)
+  public async filterLimitedEventsByDataAfterMark(limit: number, table: DataTable) {
+    const selector = await this.filterSelectorResource()
+    const filters = this.tableToFilters(table)
+    const state = await selector.post({data: {
+        data: filters,
+        after: this.selectorMark,
+        limit
+      }
+    })
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
 
