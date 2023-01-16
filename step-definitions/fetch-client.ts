@@ -365,15 +365,43 @@ export class Fetch {
   }
 
 
+  @given(/Authenticated Client downloads ledger after last appended event/)
+  public async downloadAfter() {
+    const download = await this.downloadResource()
+    const state = await download.post({data: {after: this.lastEventId}})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @given(/Authenticated Client downloads (\d+) events/)
+  public async downloadLimit(limit: number) {
+    const download = await this.downloadResource()
+    const state = await download.post({data: {limit}})
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
+  @given(/Authenticated Client downloads, after last appended event, (\d+) events/)
+  public async downloadLimitAfter(limit: number) {
+    const download = await this.downloadResource()
+    const state = await download.post({data: {
+        limit,
+        after: this.lastEventId
+      }
+    })
+    this.selectedEvents = await this.parseNdJsonFromState(state)
+  }
+
+
   @then(/Event count is (\d+)/)
   public async countSelectedEvents(expectedCount: number) {
     // deduct footer row from event count
     const lastRow = this.selectedEvents.at(-1)
     const length = this.selectedEvents.length
-    const count = lastRow?.event
+    const actualCount = lastRow?.event
       ? length
       : length - 1
-    assert.equal(count, expectedCount)
+    assert.equal(actualCount, expectedCount)
   }
 
 
