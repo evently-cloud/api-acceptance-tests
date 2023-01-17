@@ -8,9 +8,17 @@ Feature: Append Events
     And Authenticated Client registers event 'Item Removed' in entity 'Cart'
     And Authenticated Client registers event 'Cart Purchased' in entity 'Cart'
 
+    # todo: examine append forms for profile, other headers
 
   Scenario: Cannot append unregistered event
     Given Authenticated Client fails to append fact 'Store/Alarm Triggered', key 'Vancouver', meta '{}' and data '{}' because '403'
+
+
+  Scenario: Append facts with idempotent key
+    Given Authenticated Client appends idempotency-key 'today', fact 'Store/Item Stocked', key 'Vancouver', meta '{}' and data '{"sku":"Gum"}'
+    And remembers last appended event id
+    When Authenticated Client appends idempotency-key 'today', fact 'Store/Item Stocked', key 'Vancouver', meta '{}' and data '{"sku":"Gum"}'
+    Then appended event id matches last appended event id
 
 
   Scenario: Append facts
@@ -25,7 +33,3 @@ Feature: Append Events
 
   Scenario: Append events serially
     Given Authenticated Client appends fact 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Peanuts"}'
-
-
-
-## idempotent appends too

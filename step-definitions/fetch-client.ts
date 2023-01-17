@@ -129,12 +129,16 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client resets ledger/)
-  public async resetLedger() {
-    const reset = await this.authKetting.go("/")
+  private resetResource() {
+    return this.authKetting.go("/")
       .follow("ledgers")
       .follow("reset")
+  }
 
+
+  @then(/Authenticated Client resets ledger/)
+  public async resetLedger() {
+    const reset = await this.resetResource()
     await reset.post({data: {}})
   }
 
@@ -142,11 +146,15 @@ export class Fetch {
   @then(/resets ledger to remembered event id/)
   public async resetLedgerToRememberedEvent() {
     assert.ok(this.lastEventId, "last event id not remembered")
-    const reset = await this.authKetting.go("/")
-      .follow("ledgers")
-      .follow("reset")
-
+    const reset = await this.resetResource()
     await reset.post({data: {after: this.lastEventId}})
+  }
+
+
+  private factAppender() {
+    return this.authKetting.go("/")
+      .follow("append")
+      .follow("factual")
   }
 
 
@@ -159,13 +167,8 @@ export class Fetch {
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
-
-    const factAppender = await this.authKetting.go("/")
-      .follow("append")
-      .follow("factual")
-
-    const appendResult = await factAppender.post({data: appendEvent})
-
+    const appender = await this.factAppender()
+    const appendResult = await appender.post({data: appendEvent})
     this.appendedEvent = appendResult.data
   }
 
@@ -179,17 +182,31 @@ export class Fetch {
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
-
-    const factAppender = await this.authKetting.go("/")
-      .follow("append")
-      .follow("factual")
+    const appender = await this.factAppender()
 
     try {
-      await factAppender.post({data: appendEvent})
+      await appender.post({data: appendEvent})
       assert.fail("should have failed to append fact")
     } catch (err: any) {
       assert.equal(err.response.status, expectedStatus, "wrong failure on append")
     }
+  }
+
+
+  @then(/Authenticated Client appends idempotency-key '(.+)', fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
+  public async appendIdempotentFactEvent(iKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
+    // todo: should be header, according to level3 rest form spec.
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      "idempotencyKey": iKey,
+      meta: JSON.parse(metaIn),
+      data: JSON.parse(dataIn)
+    }
+    const appender = await this.factAppender()
+    const appendResult = await appender.post({data: appendEvent})
+    this.appendedEvent = appendResult.data
   }
 
 
@@ -441,6 +458,12 @@ export class Fetch {
   @then(/remembers last appended event id/)
   public async rememberLastAppendedEventId() {
     this.lastEventId = this.appendedEvent.eventId
+  }
+
+
+  @then(/appended event id matches last appended event id/)
+  public async eventIdMatchesSavedAppendedEventId() {
+    assert.equal(this.appendedEvent.eventId, this.lastEventId)
   }
 
 
