@@ -170,6 +170,29 @@ export class Fetch {
   }
 
 
+  @then(/Authenticated Client fails to append fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
+  public async failAppendFactEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      meta: JSON.parse(metaIn),
+      data: JSON.parse(dataIn)
+    }
+
+    const factAppender = await this.authKetting.go("/")
+      .follow("append")
+      .follow("factual")
+
+    try {
+      await factAppender.post({data: appendEvent})
+      assert.fail("should have failed to append fact")
+    } catch (err: any) {
+      assert.equal(err.response.status, expectedStatus, "wrong failure on append")
+    }
+  }
+
+
   @then(/Authenticated Client appends facts/)
   public async appendFacts(dataIn: DataTable) {
     const appendRows: Event[] = dataIn.hashes()
@@ -444,7 +467,7 @@ export class Fetch {
       await this.resource.delete()
       assert.fail("should not be able to delete")
     } catch (err: any) {
-      assert.ok(err.response.status === expectedStatus, "wrong failure on delete")
+      assert.equal(err.response.status, expectedStatus, "wrong failure on delete")
     }
   }
 

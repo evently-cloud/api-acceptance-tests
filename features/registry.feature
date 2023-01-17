@@ -51,6 +51,7 @@ Feature: Registry
     And follows list entry with name 'Registration Tested'
     Then fails to delete the resource because of status 422
 
+
   Scenario: Delete an entity event type
     Given Authenticated Client resets ledger
     And Authenticated Client starts at root
