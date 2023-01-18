@@ -194,13 +194,12 @@ export class Fetch {
 
 
   @then(/Authenticated Client appends idempotency-key '(.+)', fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
-  public async appendIdempotentFactEvent(iKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
-    // todo: should be header, according to level3 rest form spec.
+  public async appendIdempotentFactEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
       entity,
       key,
       event,
-      "idempotencyKey": iKey,
+      idempotencyKey,
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
@@ -210,11 +209,92 @@ export class Fetch {
   }
 
 
+  @then(/Authenticated Client fails to append idempotency-key '(.+)', fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
+  public async failAppendIdempotentFactEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      idempotencyKey,
+      meta: JSON.parse(metaIn),
+      data: JSON.parse(dataIn)
+    }
+    const appender = await this.factAppender()
+    try {
+      await appender.post({data: appendEvent})
+      assert.fail("should have failed to append fact")
+    } catch (err: any) {
+      assert.equal(err.response.status, expectedStatus, "wrong failure on append")
+    }
+  }
+
+
   @then(/Authenticated Client appends facts/)
   public async appendFacts(dataIn: DataTable) {
     const appendRows: Event[] = dataIn.hashes()
     for (const {entity, event, key, meta, data} of appendRows) {
       await this.appendFactEvent(entity, event, key, meta, data)
+    }
+  }
+
+
+  private serialAppender() {
+    return this.authKetting.go("/")
+      .follow("append")
+      .follow("serial")
+  }
+
+
+  @then(/Authenticated Client appends serial event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
+  public async appendSerialEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      meta:             JSON.parse(metaIn),
+      data:             JSON.parse(dataIn),
+      previousEventId:  this.lastEventId
+    }
+    const appender = await this.serialAppender()
+    const appendResult = await appender.post({data: appendEvent})
+    this.appendedEvent = appendResult.data
+  }
+
+
+  @then(/Authenticated Client serially appends idempotency-key '(.+)', event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
+  public async appendSerialIdempotentEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      idempotencyKey,
+      meta:            JSON.parse(metaIn),
+      data:            JSON.parse(dataIn),
+      previousEventId: this.lastEventId
+    }
+    const appender = await this.serialAppender()
+    const appendResult = await appender.post({data: appendEvent})
+    this.appendedEvent = appendResult.data
+  }
+
+
+  @then(/Authenticated Client fails to append serial event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
+  public async failAppendSerialEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      meta:             JSON.parse(metaIn),
+      data:             JSON.parse(dataIn),
+      previousEventId:  this.lastEventId
+    }
+    const appender = await this.serialAppender()
+
+    try {
+      await appender.post({data: appendEvent})
+      assert.fail("should have failed to append serial event")
+    } catch (err: any) {
+      assert.equal(err.response.status, expectedStatus, "wrong failure on append")
     }
   }
 
