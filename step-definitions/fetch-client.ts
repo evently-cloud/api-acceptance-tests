@@ -287,7 +287,7 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client fails to append serial event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
+  @then(/Authenticated Client fails to serially append event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
   public async failAppendSerialEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
     const appendEvent = {
       entity,

@@ -55,7 +55,7 @@ Feature: Append Events
     Given Authenticated Client appends fact 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Peanuts"}'
     And remembers last appended event id
     And Authenticated Client serially appends event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Chocolate_Cookie"}'
-    Then Authenticated Client fails to append serial event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Fudge_Brownie"}' because '409'
+    Then Authenticated Client fails to serially append event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Fudge_Brownie"}' because '409'
 
 
   Scenario: Append serial events with idempotency key
