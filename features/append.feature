@@ -31,11 +31,11 @@ Feature: Append Events
   Scenario: Append facts
     Given Authenticated Client appends facts
       | entity  | event               | key       | meta              | data                        |
-      | Store   | Item Stocked        | Vancouver | {"actor":"Ami"}   | {"sku":"Fudge_Brownie"}     |
-      | Store   | Item Stocked        | Vancouver | {"actor":"Ami"}   | {"sku":"Violet_Crumble"}    |
-      | Store   | Item Stocked        | Vancouver | {"actor":"Ami"}   | {"sku":"Chocolate_Cookie"}  |
-      | Store   | Item Stocked        | Vancouver | {"actor":"Marc"}  | {"sku":"Peanuts"}           |
-      | Store   | Item Stocked        | Vancouver | {"actor":"Marc"}  | {"sku":"Carrots"}           |
+      | Store   | Item Stocked        | Vancouver | {"clerk":"Ami"}   | {"sku":"Fudge_Brownie"}     |
+      | Store   | Item Stocked        | Vancouver | {"clerk":"Ami"}   | {"sku":"Violet_Crumble"}    |
+      | Store   | Item Stocked        | Vancouver | {"clerk":"Ami"}   | {"sku":"Chocolate_Cookie"}  |
+      | Store   | Item Stocked        | Vancouver | {"clerk":"Marc"}  | {"sku":"Peanuts"}           |
+      | Store   | Item Stocked        | Vancouver | {"clerk":"Marc"}  | {"sku":"Carrots"}           |
 
 
   Scenario: Discover serial append form
@@ -96,3 +96,9 @@ Feature: Append Events
     When Authenticated Client atomically appends event 'Cart/Cart Purchased', key '1', meta '{}' and data '{"payment":"cash"}'
     Then Authenticated Client fails to atomically append event 'Cart/Cart Purchased', key '1', meta '{}' and data '{"payment":"Debit"}' because '409'
 
+
+  Scenario: Atomically append events with a filter selector
+    Given Authenticated Client filters 'Store' events with meta filter '$.clerk ? (@=="Ami")'
+    And remembers selector
+    When Authenticated Client atomically appends event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Turnips"}'
+    Then Authenticated Client fails to atomically append event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Ketchup_Chips"}' because '409'
