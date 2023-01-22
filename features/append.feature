@@ -97,8 +97,17 @@ Feature: Append Events
     Then Authenticated Client fails to atomically append event 'Cart/Cart Purchased', key '1', meta '{}' and data '{"payment":"Debit"}' because '409'
 
 
-  Scenario: Atomically append events with a filter selector
+  Scenario: Atomically append events with a meta filter selector
     Given Authenticated Client filters 'Store' events with meta filter '$.clerk ? (@=="Ami")'
     And remembers selector
     When Authenticated Client atomically appends event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Turnips"}'
     Then Authenticated Client fails to atomically append event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Ketchup_Chips"}' because '409'
+
+
+  Scenario: Atomically append events with a data filter selector
+    Given Authenticated Client filters all data events
+      | entity        | event         | filter                  |
+      | Store         | Item Stocked  | $.sku ? (@ == "Limes")  |
+    And remembers selector
+    When Authenticated Client atomically appends event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Limes"}'
+    Then Authenticated Client fails to atomically append event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Limes"}' because '409'
