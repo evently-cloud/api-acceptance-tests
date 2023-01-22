@@ -21,6 +21,15 @@ type Event = {
   data:   string
 }
 
+type Selector = {
+  selectorId: string,
+  mark:       string
+}
+
+function isEvent(input: any): input is Event {
+  return input.event
+}
+
 
 @binding([Workspace])
 export class Fetch {
@@ -34,8 +43,8 @@ export class Fetch {
   private resource: Resource
   private appendedEvent: any = null
   private lastEventId: string = ""
-  private selectorMark: string = ""
-  private selectedEvents: Event[] = []
+  private lastSelector: Selector | undefined
+  private selectedEvents: Array<Selector | Event> = []
 
 
 
@@ -245,7 +254,7 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client appends serial event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
+  @then(/Authenticated Client serially appends event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
   public async appendSerialEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
       entity,
@@ -299,6 +308,67 @@ export class Fetch {
   }
 
 
+  private atomicAppender() {
+    return this.authKetting.go("/")
+      .follow("append")
+      .follow("atomic")
+  }
+
+
+  @then(/Authenticated Client atomically appends event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
+  public async appendAtomicEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      meta:     JSON.parse(metaIn),
+      data:     JSON.parse(dataIn),
+      selector: this.lastSelector
+    }
+    const appender = await this.atomicAppender()
+    const appendResult = await appender.post({data: appendEvent})
+    this.appendedEvent = appendResult.data
+  }
+
+
+  @then(/Authenticated Client atomically appends idempotency-key '(.+)', event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
+  public async appendAtomicIdempotentEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      idempotencyKey,
+      meta:     JSON.parse(metaIn),
+      data:     JSON.parse(dataIn),
+      selector:       this.lastSelector
+    }
+    const appender = await this.atomicAppender()
+    const appendResult = await appender.post({data: appendEvent})
+    this.appendedEvent = appendResult.data
+  }
+
+
+  @then(/Authenticated Client fails to atomically append event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
+  public async failAppendAtomicEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
+    const appendEvent = {
+      entity,
+      key,
+      event,
+      meta:     JSON.parse(metaIn),
+      data:     JSON.parse(dataIn),
+      selector: this.lastSelector
+    }
+    const appender = await this.atomicAppender()
+
+    try {
+      await appender.post({data: appendEvent})
+      assert.fail("should have failed to append atomic event")
+    } catch (err: any) {
+      assert.equal(err.response.status, expectedStatus, "wrong failure on append")
+    }
+  }
+
+
   private replaySelectorResource() {
     return this.authKetting.go("/")
       .follow("selectors")
@@ -339,7 +409,7 @@ export class Fetch {
     const data = {
       entity,
       keys: [key],
-      after: this.selectorMark
+      after: this.lastSelector?.mark
     }
     const state = await selector.post({data})
     this.selectedEvents = await this.parseNdJsonFromState(state)
@@ -367,7 +437,7 @@ export class Fetch {
       keys,
       events,
       limit,
-      after: this.selectorMark
+      after: this.lastSelector?.mark
     }
     const state = await selector.post({data})
     this.selectedEvents = await this.parseNdJsonFromState(state)
@@ -407,7 +477,7 @@ export class Fetch {
     const selector = await this.filterSelectorResource()
     const sendData = {
       meta,
-      after: this.selectorMark
+      after: this.lastSelector?.mark
     }
     const state = await selector.post({data: sendData})
     this.selectedEvents = await this.parseNdJsonFromState(state)
@@ -420,7 +490,7 @@ export class Fetch {
     const sendData = {
       meta,
       limit,
-      after: this.selectorMark
+      after: this.lastSelector?.mark
     }
     const state = await selector.post({data: sendData})
     this.selectedEvents = await this.parseNdJsonFromState(state)
@@ -456,7 +526,7 @@ export class Fetch {
     const filters = this.tableToFilters(table)
     const state = await selector.post({data: {
         data: filters,
-        after: this.selectorMark
+        after: this.lastSelector?.mark
       }
     })
     this.selectedEvents = await this.parseNdJsonFromState(state)
@@ -469,7 +539,7 @@ export class Fetch {
     const filters = this.tableToFilters(table)
     const state = await selector.post({data: {
         data: filters,
-        after: this.selectorMark,
+        after: this.lastSelector?.mark,
         limit
       }
     })
@@ -518,7 +588,7 @@ export class Fetch {
     // deduct footer row from event count
     const lastRow = this.selectedEvents.at(-1)
     const length = this.selectedEvents.length
-    const actualCount = lastRow?.event
+    const actualCount = isEvent(lastRow)
       ? length
       : length - 1
     assert.equal(actualCount, expectedCount)
@@ -528,10 +598,10 @@ export class Fetch {
   @then(/last Event is '(.+)'/)
   public async lastEventIs(expectedEvent: string) {
     const lastRow = this.selectedEvents.at(-1)
-    const lastEvent = lastRow?.event
+    const lastEvent = isEvent(lastRow)
       ? lastRow
-      : this.selectedEvents.at(-2)
-    assert.equal(lastEvent?.event, expectedEvent)
+      : this.selectedEvents.at(-2) as Event
+    assert.equal(lastEvent.event, expectedEvent)
   }
 
 
@@ -547,10 +617,10 @@ export class Fetch {
   }
 
 
-  @then(/remembers selector mark/)
-  public async rememberSelectorMark() {
+  @then(/remembers selector/)
+  public async rememberSelector() {
     // @ts-ignore  Last 'event' is actually the footer
-    this.selectorMark = this.selectedEvents.at(-1)?.mark
+    this.lastSelector = this.selectedEvents.at(-1)
   }
 
 
