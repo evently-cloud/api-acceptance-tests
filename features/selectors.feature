@@ -102,3 +102,11 @@ Feature: Selectors
       | Tennis Match  | Ball Out      | $.player ? (@ == "Char")  |
     Then Event count is 4
     And last Event is 'Ball Served'
+
+  Scenario: Special characters in entities, keys, events and data
+    Given Authenticated Client registers event 'Bri\ck's "dropped"' in entity 'Te'nnis\"Match"'
+    And Authenticated Client appends facts
+      | entity            | event               | key           | meta            | data              |
+      | Te'nnis\"Match"   | Bri\ck's "dropped"  | 100\24 "41'"   | {"command": 2}  | {"k": "'\\\\jumps"}  |
+    When Authenticated Client replays 'Bri\ck's "dropped"' events for 'Te'nnis\"Match"', keys '100\24 "41'"'
+    Then Event count is 1
