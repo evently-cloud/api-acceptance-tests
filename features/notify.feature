@@ -1,0 +1,36 @@
+Feature: Notifications
+  Tests Notification resources
+
+  Scenario: Set up data for tests
+    Given Authenticated Client resets ledger
+    And Authenticated Client registers event 'Match Started' in entity 'Tennis Match'
+    And Authenticated Client registers event 'Ball Served' in entity 'Tennis Match'
+    And Authenticated Client registers event 'Ball Returned' in entity 'Tennis Match'
+    And Authenticated Client registers event 'Ball Out' in entity 'Tennis Match'
+    Then Authenticated Client appends facts
+      | entity        | event         | key         | meta            | data                          |
+      | Tennis Match  | Match Started | 2023-01-07  | {"command": 1}  | {"players": ["Kal", "Char"]}  |
+      | Tennis Match  | Ball Served   | 2023-01-07  | {"command": 2}  | {"player": "Kal"}             |
+      | Tennis Match  | Ball Returned | 2023-01-07  | {"command": 3}  | {"player": "Char"}            |
+      | Tennis Match  | Ball Returned | 2023-01-07  | {"command": 4}  | {"player": "Kal"}             |
+      | Tennis Match  | Ball Out      | 2023-01-07  | {"command": 5}  | {"player": "Char"}            |
+      | Tennis Match  | Match Started | 2023-01-09  | {"command": 6}  | {"players": ["Jer", "Char"]}  |
+      | Tennis Match  | Ball Served   | 2023-01-09  | {"command": 7}  | {"player": "Char"}            |
+      | Tennis Match  | Ball Returned | 2023-01-09  | {"command": 8}  | {"player": "Jer"}             |
+      | Tennis Match  | Ball Out      | 2023-01-09  | {"command": 9}  | {"player": "Char"}            |
+
+
+  Scenario: Open a channel
+    Given Authenticated Client opens a notification channel
+    Then content is HAL
+    And has L3 Nexus profile
+    And has notify links
+      | rel           | href                      | title                                                                                                                           | profile                           |
+      | subscribe     | /notify/CID/subscribe     | Subscribe to selector notifications in this channel                                                                             | https://level3.rest/profiles/form |
+      | subscriptions | /notify/CID/subscriptions | Selectors currently subscribed to on this channel                                                                               | https://level3.rest/profiles/form |
+      | stream        | /notify/CID/sse           | Notification stream, provided with Server-Sent Events. See https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events  |                                   |
+
+
+
+  # Post an event
+  # Compare channel notification value to event ID that is returned.

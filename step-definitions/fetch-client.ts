@@ -45,7 +45,7 @@ export class Fetch {
   private lastEventId: string = ""
   private lastSelector: Selector | undefined
   private selectedEvents: Array<Selector | Event> = []
-
+  private channel: Resource | undefined
 
 
   public constructor(protected workspace: Workspace) {
@@ -669,6 +669,12 @@ export class Fetch {
   }
 
 
+  @then(/has L3 Nexus profile/)
+  public async hasNexusProfile() {
+    await this.hasProfile("https://level3.rest/profiles/nexus", ["GET", "HEAD", "DELETE"])
+  }
+
+
   @then(/has L3 Form profile/)
   public async hasFormProfile() {
     await this.hasProfile("https://level3.rest/profiles/form", ["GET", "HEAD", "POST"])
@@ -678,6 +684,12 @@ export class Fetch {
   @then(/has L3 Lookup profile/)
   public async hasLookupProfile() {
     await this.hasProfile("https://level3.rest/profiles/lookup", ["GET", "HEAD", "POST"])
+  }
+
+
+  @then(/has L3 Action profile/)
+  public async hasActionProfile() {
+    await this.hasProfile("https://level3.rest/profiles/action", ["GET", "HEAD", "POST"])
   }
 
 
@@ -743,6 +755,22 @@ export class Fetch {
   }
 
 
+  @then(/has notify links/)
+  public async hasNotifyLinks(data: DataTable) {
+    const channelUri = this.channel?.uri
+    if (channelUri) {
+      const lastSlash = channelUri.lastIndexOf("/")
+      const channelId = channelUri.substring(lastSlash)
+      const newRows = data.raw().map(
+        (row) => row.map((cell) => cell.replace("/CID", channelId)))
+      const newData = new DataTable(newRows)
+      await this.hasLinks(newData)
+    } else {
+      assert.fail("cannot get channel state")
+    }
+  }
+
+
   @then(/Client is not authorized/)
   public async notAuthorized() {
     try {
@@ -791,5 +819,33 @@ export class Fetch {
     const {entity: actualEntity, event: actualEvent} = state.data
     assert.equal(actualEntity, entity, "not the same entity")
     assert.equal(actualEvent, event, "not the same event")
+  }
+
+
+  @then(/Client fails to open a notification channel/)
+  public async openChannelAndFail() {
+    const channelOpener = await this.client.go("/")
+      .follow("notifications")
+      .follow("open-channel")
+
+    const result = await channelOpener.fetch({
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: "{}"
+    })
+    assert.equal(401, result.status)
+  }
+
+
+  @then(/Authenticated Client opens a notification channel/)
+  public async openChannel() {
+    const channelOpener = await this.authKetting.go("/")
+      .follow("notifications")
+      .follow("open-channel")
+
+    this.channel = await channelOpener.postFollow({data:{}})
+    this.resource = this.channel
   }
 }
