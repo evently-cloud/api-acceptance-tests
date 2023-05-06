@@ -249,7 +249,7 @@ export class Fetch {
 
   @then(/Authenticated Client appends facts/)
   public async appendFacts(dataIn: DataTable) {
-    const appendRows: Event[] = dataIn.hashes()
+    const appendRows = dataIn.hashes()
     for (const {entity, event, key, meta, data} of appendRows) {
       await this.appendFactEvent(entity, event, key, meta, data)
     }
@@ -788,7 +788,7 @@ export class Fetch {
   public async hasLinks(data: DataTable) {
     const state = await this.fetch()
     const {links: actual} = state
-    const expected: ProfileLink[] = data.hashes()
+    const expected = data.hashes()
     for (const {rel, href, title, profile} of expected) {
       const actualLink = actual.get(rel) as ProfileLink
       assert.ok(actualLink, `missing link ${rel}`)
