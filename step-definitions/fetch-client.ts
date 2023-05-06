@@ -1,7 +1,9 @@
 import {DataTable, setDefaultTimeout} from "@cucumber/cucumber"
 import assert from "assert"
 import {binding, given, then} from "cucumber-tsflow"
+import EventSource from "eventsource"
 import {bearerAuth, Ketting, Link, Resource, State} from "ketting"
+import {scheduler} from "timers/promises"
 import {Workspace} from "./workspace"
 
 
@@ -34,6 +36,7 @@ function isEvent(input: any): input is Event {
 @binding([Workspace])
 export class Fetch {
 
+  private accessToken = ""
   private noauthKetting: Ketting
   private authKetting: Ketting
 
@@ -46,6 +49,11 @@ export class Fetch {
   private lastSelector: Selector | undefined
   private selectedEvents: Array<Selector | Event> = []
   private channel: Resource | undefined
+  private subscribedSelector: Selector | undefined
+  private sseMark: string | undefined
+  private sseSelectorsTriggered: string[] = []
+  private eventSource: EventSource | undefined
+
 
 
   public constructor(protected workspace: Workspace) {
@@ -53,6 +61,7 @@ export class Fetch {
     this.authKetting = new Ketting(workspace.eventlyUrl)
     this.authKetting.use(bearerAuth(workspace.eventlyToken))
     this.client = this.noauthKetting
+    this.accessToken = workspace.eventlyToken
   }
 
 
@@ -605,6 +614,47 @@ export class Fetch {
   }
 
 
+
+  @then(/subscribes to selector/)
+  public async subscribeToSelector() {
+    if (this.lastSelector) {
+      this.subscribedSelector = this.lastSelector
+    }
+    const subscribe = await this.channel?.follow("subscribe")
+    const subscription = await subscribe?.postFollow({
+      data: {
+      selectorId: this.lastSelector?.selectorId
+      }
+    })
+    if (subscription) {
+      this.resource = subscription
+      let result = await subscription.fetch()
+      const {selector, selectorType} = await result.json()
+      if (selector.keys) {
+        assert.equal(selectorType, "Replay selector")
+      } else {
+        assert.equal(selectorType, "Filter selector")
+      }
+      // check subscriptions resource
+      const subs = await this.channel?.follow("subscriptions")
+      if (subs) {
+        result = await subs.fetchOrThrow()
+        const {_links} = await result.json()
+        const {title, profile, href} = _links["https://level3.rest/patterns/list/editable#add-entry"]
+        // title, form profile, subscribe.uri endswith href
+        assert.equal(title, "Selector subscription form")
+        assert.equal(profile, "https://level3.rest/profiles/form")
+        assert.ok(subscribe?.uri.endsWith(href))
+        const entries: Link[] = _links["https://level3.rest/patterns/list#list-entry"]
+        // missing profile attribute on Link
+        const foundSub: any = entries.find((entry) => subscription.uri.endsWith(entry.href))
+        assert.ok(foundSub)
+        assert.equal(foundSub.profile, "https://level3.rest/profiles/data")
+      }
+    }
+  }
+
+
   @then(/remembers last appended event id/)
   public async rememberLastAppendedEventId() {
     this.lastEventId = this.appendedEvent.eventId
@@ -847,5 +897,30 @@ export class Fetch {
 
     this.channel = await channelOpener.postFollow({data:{}})
     this.resource = this.channel
+    const stream= await this.channel.follow("stream")
+    //todo close this when done?
+    this.eventSource = new EventSource(stream?.uri || "FAIL", {
+      headers: {Authorization: `Bearer ${this.accessToken}`}
+    })
+    this.eventSource.addEventListener("Selectors Triggered", (me) => {
+      this.sseMark = me.lastEventId
+      this.sseSelectorsTriggered = me.data.split(",")
+    })
+  }
+
+
+  @then(/closes channel/)
+  public async closeChannel() {
+    this.eventSource?.close()
+  }
+
+
+  @then(/notification matches id and selector/)
+  public async notificationMatchesIdAndSelector() {
+    // wait for notification to arrive
+    await scheduler.wait(100)
+    const expectedSseMark = `${this.lastEventId.substring(0, 16)}${this.lastEventId.slice(-8)}`
+    assert.equal(expectedSseMark, this.sseMark)
+    assert.ok(this.sseSelectorsTriggered.includes(this.subscribedSelector?.selectorId || ""))
   }
 }

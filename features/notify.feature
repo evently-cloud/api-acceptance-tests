@@ -1,5 +1,5 @@
 Feature: Notifications
-  Tests Notification resources
+  Test Notifications
 
   Scenario: Set up data for tests
     Given Authenticated Client resets ledger
@@ -21,7 +21,7 @@ Feature: Notifications
 
 
   Scenario: Open a channel
-    Given Authenticated Client opens a notification channel
+    When Authenticated Client opens a notification channel
     Then content is HAL
     And has L3 Nexus profile
     And has notify links
@@ -29,8 +29,19 @@ Feature: Notifications
       | subscribe     | /notify/CID/subscribe     | Subscribe to selector notifications in this channel                                                                             | https://level3.rest/profiles/form |
       | subscriptions | /notify/CID/subscriptions | Selectors currently subscribed to on this channel                                                                               | https://level3.rest/profiles/form |
       | stream        | /notify/CID/sse           | Notification stream, provided with Server-Sent Events. See https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events  |                                   |
+    And closes channel
 
-
-
-  # Post an event
-  # Compare channel notification value to event ID that is returned.
+  Scenario: Subscribe to a replay selector
+    Given Authenticated Client opens a notification channel
+    And Authenticated Client replays all events for 'Tennis Match', keys '2023-01-09'
+    And remembers selector
+    When Authenticated Client subscribes to selector
+    And content is HAL
+    And has L3 Data profile
+    And has notify links
+      | rel     | href        | title                                 | profile                             |
+      | channel | /notify/CID | Channel this subscription belongs to  | https://level3.rest/profiles/nexus  |
+    And Authenticated Client appends fact 'Tennis Match/Ball Served', key '2023-01-09', meta '{}' and data '{"player": "Jer"}'
+    And remembers last appended event id
+    Then notification matches id and selector
+    And closes channel
