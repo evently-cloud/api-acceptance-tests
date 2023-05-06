@@ -898,7 +898,6 @@ export class Fetch {
     this.channel = await channelOpener.postFollow({data:{}})
     this.resource = this.channel
     const stream= await this.channel.follow("stream")
-    //todo close this when done?
     this.eventSource = new EventSource(stream?.uri || "FAIL", {
       headers: {Authorization: `Bearer ${this.accessToken}`}
     })
