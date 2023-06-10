@@ -641,7 +641,7 @@ export class Fetch {
         result = await subs.fetchOrThrow()
         const {_links} = await result.json()
         const {title, profile, href} = _links["https://level3.rest/patterns/list/editable#add-entry"]
-        // title, form profile, subscribe.uri endswith href
+        // title, form profile, subscribe.uri ends with href
         assert.equal(title, "Selector subscription form")
         assert.equal(profile, "https://level3.rest/profiles/form")
         assert.ok(subscribe?.uri.endsWith(href))

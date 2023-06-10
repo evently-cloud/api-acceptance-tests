@@ -39,6 +39,7 @@ Feature: Notifications
     When Authenticated Client subscribes to selector
     And content is HAL
     And has L3 Data profile
+    And has L3 Entry Resource profile
     And has notify links
       | rel     | href        | title                                 | profile                             |
       | channel | /notify/CID | Channel this subscription belongs to  | https://level3.rest/profiles/nexus  |
@@ -57,6 +58,7 @@ Feature: Notifications
     When Authenticated Client subscribes to selector
     And content is HAL
     And has L3 Data profile
+    And has L3 Entry Resource profile
     And has notify links
       | rel     | href        | title                                 | profile                             |
       | channel | /notify/CID | Channel this subscription belongs to  | https://level3.rest/profiles/nexus  |
