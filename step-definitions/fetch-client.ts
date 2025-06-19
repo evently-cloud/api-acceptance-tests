@@ -1,13 +1,16 @@
 import {DataTable, setDefaultTimeout} from "@cucumber/cucumber"
 import assert from "assert"
-import {binding, given, then} from "cucumber-tsflow"
-import EventSource from "eventsource"
-import {bearerAuth, Ketting, Link, Resource, State} from "ketting"
-import {scheduler} from "timers/promises"
-import {Workspace} from "./workspace"
+import tsflow from "cucumber-tsflow"
+import { EventSource } from "eventsource"
+import { bearerAuth, Ketting, Link, Resource, State } from "ketting"
+import { scheduler} from "timers/promises"
 
+import { Workspace } from "./workspace.js"
 
-// ten minutes
+//ts-flow is CommonJS
+const { binding, given, then } = tsflow
+
+// ten minutes. Why this long?
 setDefaultTimeout(600 * 1000);
 
 
@@ -16,11 +19,10 @@ type ProfileLink = Link & {
 }
 
 type Event = {
-  entity: string,
-  event:  string,
-  key:    string,
-  meta:   string,
-  data:   string
+  event:    string,
+  entities: Record<string, string[]>,
+  meta:     string,
+  data:     string
 }
 
 type Selector = {
@@ -32,18 +34,31 @@ function isEvent(input: any): input is Event {
   return input.event
 }
 
+type AuthInfo = {
+  ledger?: string,
+  roles: string[]
+}
+
+function setAuthorization(ketting: Ketting, auth: AuthInfo) {
+  const authHeader = Buffer.from(JSON.stringify(auth)).toString("base64url")
+  ketting.use(bearerAuth(authHeader))
+}
+
 
 @binding([Workspace])
 export class Fetch {
 
-  private accessToken = ""
-  private noauthKetting: Ketting
-  private authKetting: Ketting
+  private readonly adminKetting: Ketting
+
+  private clientToken: string = "NONE"
+  private publicKetting: Ketting
+  private clientKetting: Ketting
 
   private client: Ketting
 
-  // @ts-ignore
+  // @ts-ignore // it will be set
   private resource: Resource
+  private ledgerId: string | undefined
   private appendedEvent: any = null
   private lastEventId: string = ""
   private lastSelector: Selector | undefined
@@ -57,11 +72,12 @@ export class Fetch {
 
 
   public constructor(protected workspace: Workspace) {
-    this.noauthKetting = new Ketting(workspace.eventlyUrl)
-    this.authKetting = new Ketting(workspace.eventlyUrl)
-    this.authKetting.use(bearerAuth(workspace.eventlyToken))
-    this.client = this.noauthKetting
-    this.accessToken = workspace.eventlyToken
+    this.adminKetting = new Ketting(workspace.eventlyUrl)
+    setAuthorization(this.adminKetting, {roles: ["admin"]})
+    // these will get tokens once the ledger is created
+    this.publicKetting = new Ketting(workspace.eventlyUrl)
+    this.clientKetting = new Ketting(workspace.eventlyUrl)
+    this.client = this.clientKetting
   }
 
 
@@ -76,7 +92,7 @@ export class Fetch {
 
 
   private assertOnlyAllows(headers: Headers, methods: string[]) {
-    const allowHeader = headers.get("allow") || ""
+    const allowHeader = headers.get("allow") ?? ""
     const allows = this.toList(allowHeader)
       .map((m) => m.toUpperCase())
     const extra = methods.filter((m) => !allows.includes(m))
@@ -102,17 +118,39 @@ export class Fetch {
   }
 
 
+  @given("Ledger has been created")
+  public async createLedger() {
+    if (!this.ledgerId) {
+      const createResource = await this.adminKetting.go("/")
+        .follow("ledgers")
+        .follow("https://level3.rest/patterns/list/editable#add-entry")
+
+      const newLedger = await createResource.postFollow({
+        data: {
+          name:"API acceptance test ledger",
+          description: "Ledger used for REST API testing"
+        }
+      })
+      const state = await newLedger.get()
+      this.ledgerId = state.data.id
+
+    setAuthorization(this.publicKetting, {ledger: this.ledgerId, roles: ["public"]})
+    setAuthorization(this.clientKetting, {ledger: this.ledgerId, roles: ["client"]})
+    }
+  }
+
+
   @given("Client starts at root")
-  public async getRoot() {
-    this.client = this.noauthKetting
-    this.resource = await this.client.go("/")
+  public getRoot() {
+    this.client = this.publicKetting
+    this.resource = this.client.go("/")
   }
 
 
   @given("Authenticated Client starts at root")
-  public async getRootAsAuthenticatedClient() {
-    this.client = this.authKetting
-    this.resource = await this.client.go("/")
+  public getRootAsAuthenticatedClient() {
+    this.client = this.clientKetting
+    this.resource = this.client.go("/")
   }
 
 
@@ -133,11 +171,11 @@ export class Fetch {
 
   @then(/follows list entry with name '(.+)'/)
   public async followListEntry(name: string) {
-    const entryLinks = await this.resource.links("https://level3.rest/patterns/list#list-entry")
-    // @ts-ignore
+    const state = await this.fetch();
+    const entryLinks = state.links.getMany("https://level3.rest/patterns/list#list-entry")
     const entry = entryLinks.find((l) => l.name === name)
     assert.ok(entry !== undefined, `cannot find link named '${name}' in list: ${JSON.stringify(entryLinks)}`)
-    this.resource = await this.client.go(entry)
+    this.resource = this.client.go(entry)
   }
 
 
@@ -148,7 +186,7 @@ export class Fetch {
 
 
   private resetResource() {
-    return this.authKetting.go("/")
+    return this.clientKetting.go("/")
       .follow("ledgers")
       .follow("reset")
   }
@@ -170,7 +208,7 @@ export class Fetch {
 
 
   private factAppender() {
-    return this.authKetting.go("/")
+    return this.clientKetting.go("/")
       .follow("append")
       .follow("factual")
   }
@@ -179,7 +217,7 @@ export class Fetch {
   @then(/Authenticated Client appends fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
   public async appendFactEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
-      entity,
+      entities: [{entity, key}],
       key,
       event,
       meta: JSON.parse(metaIn),
@@ -194,8 +232,7 @@ export class Fetch {
   @then(/Authenticated Client fails to append fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
   public async failAppendFactEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
     const appendEvent = {
-      entity,
-      key,
+      entities: [{entity, key}],
       event,
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
@@ -214,8 +251,7 @@ export class Fetch {
   @then(/Authenticated Client appends idempotency-key '(.+)', fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
   public async appendIdempotentFactEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
-      entity,
-      key,
+      entities: [{entity, key}],
       event,
       idempotencyKey,
       meta: JSON.parse(metaIn),
@@ -256,69 +292,8 @@ export class Fetch {
   }
 
 
-  private serialAppender() {
-    return this.authKetting.go("/")
-      .follow("append")
-      .follow("serial")
-  }
-
-
-  @then(/Authenticated Client serially appends event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
-  public async appendSerialEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
-    const appendEvent = {
-      entity,
-      key,
-      event,
-      meta:             JSON.parse(metaIn),
-      data:             JSON.parse(dataIn),
-      previousEventId:  this.lastEventId
-    }
-    const appender = await this.serialAppender()
-    const appendResult = await appender.post({data: appendEvent})
-    this.appendedEvent = appendResult.data
-  }
-
-
-  @then(/Authenticated Client serially appends idempotency-key '(.+)', event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
-  public async appendSerialIdempotentEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
-    const appendEvent = {
-      entity,
-      key,
-      event,
-      idempotencyKey,
-      meta:            JSON.parse(metaIn),
-      data:            JSON.parse(dataIn),
-      previousEventId: this.lastEventId
-    }
-    const appender = await this.serialAppender()
-    const appendResult = await appender.post({data: appendEvent})
-    this.appendedEvent = appendResult.data
-  }
-
-
-  @then(/Authenticated Client fails to serially append event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
-  public async failAppendSerialEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
-    const appendEvent = {
-      entity,
-      key,
-      event,
-      meta:             JSON.parse(metaIn),
-      data:             JSON.parse(dataIn),
-      previousEventId:  this.lastEventId
-    }
-    const appender = await this.serialAppender()
-
-    try {
-      await appender.post({data: appendEvent})
-      assert.fail("should have failed to append serial event")
-    } catch (err: any) {
-      assert.equal(err.response.status, expectedStatus, "wrong failure on append")
-    }
-  }
-
-
   private atomicAppender() {
-    return this.authKetting.go("/")
+    return this.clientKetting.go("/")
       .follow("append")
       .follow("atomic")
   }
@@ -379,7 +354,7 @@ export class Fetch {
 
 
   private replaySelectorResource() {
-    return this.authKetting.go("/")
+    return this.clientKetting.go("/")
       .follow("selectors")
       .follow("replay")
   }
@@ -454,14 +429,14 @@ export class Fetch {
 
 
   private filterSelectorResource() {
-    return this.authKetting.go("/")
+    return this.clientKetting.go("/")
       .follow("selectors")
       .follow("filter")
   }
 
 
   private downloadResource() {
-    return this.authKetting.go("/")
+    return this.clientKetting.go("/")
       .follow("ledgers")
       .follow("download")
   }
@@ -669,7 +644,7 @@ export class Fetch {
 
   @then(/remembers selector/)
   public async rememberSelector() {
-    // @ts-ignore  Last 'event' is actually the footer
+    // @ts-ignore – Last 'event' is actually the footer
     this.lastSelector = this.selectedEvents.at(-1)
   }
 
@@ -858,7 +833,7 @@ export class Fetch {
       event
     }
 
-    const registrar = await this.authKetting.go("/")
+    const registrar = await this.clientKetting.go("/")
       .follow("registry")
       .follow("register")
 
@@ -891,15 +866,22 @@ export class Fetch {
 
   @then(/Authenticated Client opens a notification channel/)
   public async openChannel() {
-    const channelOpener = await this.authKetting.go("/")
+    const channelOpener = await this.clientKetting.go("/")
       .follow("notifications")
       .follow("open-channel")
 
     this.channel = await channelOpener.postFollow({data:{}})
     this.resource = this.channel
-    const stream= await this.channel.follow("stream")
+    const stream = await this.channel.follow("stream")
     this.eventSource = new EventSource(stream?.uri || "FAIL", {
-      headers: {Authorization: `Bearer ${this.accessToken}`}
+      fetch: (url, init) =>
+        fetch(url, {
+          ...init,
+          headers: {
+            ...init.headers,
+            Authorization: `Bearer ${this.clientToken}`,
+          },
+        }),
     })
     this.eventSource.addEventListener("Selectors Triggered", (me) => {
       this.sseMark = me.lastEventId

@@ -1,6 +1,9 @@
 Feature: Registry
   Test registry resources
 
+  Background:
+    Given Ledger has been created
+
   Scenario: Discover registry
     Given Authenticated Client starts at root
     And follows rels 'registry,entities'

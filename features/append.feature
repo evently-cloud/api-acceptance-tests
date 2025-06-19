@@ -1,8 +1,9 @@
 Feature: Append Events
   Test all the ways to append events
 
-  Scenario: Prepare for tests
-    Given Authenticated Client resets ledger
+  Background: Prepare for tests
+    Given Ledger has been created
+    And Authenticated Client resets ledger
     And Authenticated Client registers event 'Item Stocked' in entity 'Store'
     And Authenticated Client registers event 'Item Added' in entity 'Cart'
     And Authenticated Client registers event 'Item Removed' in entity 'Cart'
@@ -37,33 +38,6 @@ Feature: Append Events
       | Store   | Item Stocked        | Vancouver | {"clerk":"Marc"}  | {"sku":"Peanuts"}           |
       | Store   | Item Stocked        | Vancouver | {"clerk":"Marc"}  | {"sku":"Carrots"}           |
 
-
-  Scenario: Discover serial append form
-    Given Authenticated Client starts at root
-    And follows rels 'append,serial'
-    Then content is JSON Schema
-    And has L3 Form profile
-
-
-  Scenario: Append events serially
-    Given Authenticated Client appends fact 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Peanuts"}'
-    And remembers last appended event id
-    Then Authenticated Client serially appends event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Fudge_Brownie"}'
-
-
-  Scenario: Cannot Append events serially without most recent event id
-    Given Authenticated Client appends fact 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Peanuts"}'
-    And remembers last appended event id
-    And Authenticated Client serially appends event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Chocolate_Cookie"}'
-    Then Authenticated Client fails to serially append event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Fudge_Brownie"}' because '409'
-
-
-  Scenario: Append serial events with idempotency key
-    # mixing append type to show it doesn't matter with idempotency-key
-    Given Authenticated Client appends idempotency-key 'glucose', fact 'Cart/Item Added', key 'Vancouver', meta '{}' and data '{"sku":"Violet_Crumble"}'
-    And remembers last appended event id
-    When Authenticated Client serially appends idempotency-key 'glucose', event 'Cart/Item Added', key 'Vancouver', meta '{}' and data '{"sku":"Violet_Crumble"}'
-    Then appended event id matches last appended event id
 
 
   Scenario: Discover atomic append form

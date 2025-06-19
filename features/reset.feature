@@ -1,6 +1,9 @@
 Feature: Reset ledger
   Tests resetting a ledger to a specific point
 
+  Background:
+    Given Ledger has been created
+
   Scenario: Reset Events to a known place
     Given Authenticated Client resets ledger
     And Authenticated Client registers event 'Thing Created' in entity 'tests'

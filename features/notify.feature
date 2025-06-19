@@ -1,8 +1,9 @@
 Feature: Notifications
   Test Notifications
 
-  Scenario: Set up data for tests
-    Given Authenticated Client resets ledger
+  Background: Set up data for tests
+    Given Ledger has been created
+    And Authenticated Client resets ledger
     And Authenticated Client registers event 'Match Started' in entity 'Tennis Match'
     And Authenticated Client registers event 'Ball Served' in entity 'Tennis Match'
     And Authenticated Client registers event 'Ball Returned' in entity 'Tennis Match'

@@ -5,8 +5,9 @@
 Feature: Download Ledgers
   Test downloading full ledger, partial ledger
 
-  Scenario: Set up data for tests
-    Given Authenticated Client resets ledger
+  Background: Set up data for tests
+    Given Ledger has been created
+    And Authenticated Client resets ledger
     And Authenticated Client registers event 'Light Switched On' in entity 'Things'
     And Authenticated Client registers event 'Light Switched Off' in entity 'Things'
     And Authenticated Client registers event 'Ball Bounced' in entity 'Things'

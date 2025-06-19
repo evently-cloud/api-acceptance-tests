@@ -1,0 +1,11 @@
+---
+default:
+  loader:
+    - ts-node/esm
+  import:
+    - step-definitions/**/*.ts
+  format:
+    - "@cucumber/pretty-formatter"
+  publishQuiet: true
+  worldParameters:
+    eventlyUrl: process.env.EVENTLY_URL

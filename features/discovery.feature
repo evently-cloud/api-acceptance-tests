@@ -1,8 +1,9 @@
 Feature: Look Around
-  Test the non-authenticated endpoints
+  Test the public endpoints
 
   Background:
-    Given Client starts at root
+    Given Ledger has been created
+    And Client starts at root
 
   Scenario: Root Resource
     Then content is HAL

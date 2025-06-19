@@ -2,6 +2,7 @@ Feature: Ledgers
   Test ledger resources
 
   Background:
+    Given Ledger has been created
     Given Authenticated Client starts at root
 
   Scenario: Discover ledgers
