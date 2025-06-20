@@ -28,18 +28,11 @@ Feature: Look Around
     And has links
       | rel     | href            | title                                               | profile                           |
       | factual | /append/fact    | Append Factual Events                               | https://level3.rest/profiles/form |
-      | serial  | /append/serial  | Append Serial Events to an Entity                   | https://level3.rest/profiles/form |
       | atomic  | /append/atomic  | Atomically Append Events Given a Selector Condition | https://level3.rest/profiles/form |
 
 
   Scenario: Append Fact Resource
     Given follows rels 'append,factual'
-    Then has L3 Form profile
-    And content is JSON Schema
-
-
-  Scenario: Append Serial Resource
-    Given follows rels 'append,serial'
     Then has L3 Form profile
     And content is JSON Schema
 
@@ -68,9 +61,9 @@ Feature: Look Around
     Then has L3 Home profile
     And content is HAL
     And has links
-      | rel       | href                      | title                           | profile                           |
-      | register  | /registry/register-event  | Register an Event               | https://level3.rest/profiles/form |
-      | entities  | /registry/entities        | Entities With Registered Events | https://level3.rest/profiles/home |
+      | rel       | href                      | title                              | profile                           |
+      | register  | /registry/register-event  | Register an Event                  | https://level3.rest/profiles/form |
+      | entities  | /registry/entities        | Registered Events scoped by Entity | https://level3.rest/profiles/home |
 
 
   Scenario: Register Event Resource
@@ -79,8 +72,8 @@ Feature: Look Around
     And has L3 Add Entry Resource profile
     And content is JSON Schema
     And has links
-      | rel                                                     | href                | title                                    |
-      | https://level3.rest/patterns/list/editable#adds-to-list | /registry/entities  | List of Entities With Registered Events  |
+      | rel                                                     | href              | title                      |
+      | https://level3.rest/patterns/list/editable#adds-to-list | /registry/events  | List of Registered Events  |
 
 
   Scenario: Entities Registry Resource requires Authorization
