@@ -3,11 +3,11 @@ Feature: Selectors
 
   Background: Set up data for tests
     Given Ledger has been created
-    And Authenticated Client resets ledger
-    And Authenticated Client registers event 'Match Started' in entity 'Tennis Match'
-    And Authenticated Client registers event 'Ball Served' in entity 'Tennis Match'
-    And Authenticated Client registers event 'Ball Returned' in entity 'Tennis Match'
-    And Authenticated Client registers event 'Ball Out' in entity 'Tennis Match'
+    And Admin Client resets ledger
+    And Registrar Client registers event 'Match Started' in entity 'Tennis Match'
+    And Registrar Client registers event 'Ball Served' in entity 'Tennis Match'
+    And Registrar Client registers event 'Ball Returned' in entity 'Tennis Match'
+    And Registrar Client registers event 'Ball Out' in entity 'Tennis Match'
     Then Authenticated Client appends facts
       | entity        | event         | key         | meta            | data                          |
       | Tennis Match  | Match Started | 2023-01-07  | {"command": 1}  | {"players": ["Kal", "Char"]}  |
@@ -105,7 +105,7 @@ Feature: Selectors
     And last Event is 'Ball Served'
 
   Scenario: Special characters in entities, keys, events and data
-    Given Authenticated Client registers event 'Bri\ck's "dropped"' in entity 'Te'nnis\"Match"'
+    Given Registrar Client registers event 'Bri\ck's "dropped"' in entity 'Te'nnis\"Match"'
     And Authenticated Client appends facts
       | entity            | event               | key           | meta            | data              |
       | Te'nnis\"Match"   | Bri\ck's "dropped"  | 100\24 "41'"   | {"command": 2}  | {"k": "'\\\\jumps"}  |

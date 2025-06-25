@@ -1,4 +1,4 @@
-import {DataTable, setDefaultTimeout} from "@cucumber/cucumber"
+import {BeforeAll, DataTable, setDefaultTimeout} from "@cucumber/cucumber"
 import assert from "assert"
 import tsflow from "cucumber-tsflow"
 import { EventSource } from "eventsource"
@@ -10,7 +10,7 @@ import { Workspace } from "./workspace.js"
 //ts-flow is CommonJS
 const { binding, given, then } = tsflow
 
-// ten minutes. Why this long?
+// ten minutes. This allows for long debugging sessions
 setDefaultTimeout(600 * 1000);
 
 
@@ -39,26 +39,45 @@ type AuthInfo = {
   roles: string[]
 }
 
+// share the ledgerId created in BeforeAll with the tests
+let ledgerId: string | undefined
+
 function setAuthorization(ketting: Ketting, auth: AuthInfo) {
   const authHeader = Buffer.from(JSON.stringify(auth)).toString("base64url")
   ketting.use(bearerAuth(authHeader))
 }
 
 
+const testLedgerName = "API acceptance test ledger"
+
+BeforeAll(async function() {
+  const eventlyUrl = process.env.EVENTLY_URL || "NO_URL_SET"
+  const client = new Ketting(eventlyUrl as string)
+  setAuthorization(client, {roles: ["admin"]})
+  const createResource = await client.go("/")
+    .follow("ledgers")
+    .follow("https://level3.rest/patterns/list/editable#add-entry")
+
+  const newLedger = await createResource.postFollow({
+    data: {
+      name: testLedgerName,
+      description: "Ledger used for REST API testing"
+    }
+  })
+  const state = await newLedger.get()
+  ledgerId = state.data.id
+})
+
+
+// constructed during every scenario
 @binding([Workspace])
 export class Fetch {
 
-  private readonly adminKetting: Ketting
-
   private clientToken: string = "NONE"
-  private publicKetting: Ketting
-  private clientKetting: Ketting
-
   private client: Ketting
 
   // @ts-ignore // it will be set
   private resource: Resource
-  private ledgerId: string | undefined
   private appendedEvent: any = null
   private lastEventId: string = ""
   private lastSelector: Selector | undefined
@@ -70,14 +89,17 @@ export class Fetch {
   private eventSource: EventSource | undefined
 
 
-
+  // This is constructed at the start of every scenario.
   public constructor(protected workspace: Workspace) {
-    this.adminKetting = new Ketting(workspace.eventlyUrl)
-    setAuthorization(this.adminKetting, {roles: ["admin"]})
-    // these will get tokens once the ledger is created
-    this.publicKetting = new Ketting(workspace.eventlyUrl)
-    this.clientKetting = new Ketting(workspace.eventlyUrl)
-    this.client = this.clientKetting
+    workspace.adminKetting = new Ketting(workspace.eventlyUrl)
+    setAuthorization(workspace.adminKetting, {roles: ["admin"]})
+    workspace.registrarKetting = new Ketting(workspace.eventlyUrl)
+    setAuthorization(this.workspace.getRegistrar(), {ledger: ledgerId, roles: ["registrar"]})
+    workspace.publicKetting = new Ketting(workspace.eventlyUrl)
+    setAuthorization(this.workspace.getPublic(), {ledger: ledgerId, roles: ["public"]})
+    workspace.clientKetting = new Ketting(workspace.eventlyUrl)
+    setAuthorization(this.workspace.getClient(), {ledger: ledgerId, roles: ["client"]})
+    this.client = workspace.getPublic()
   }
 
 
@@ -118,10 +140,11 @@ export class Fetch {
   }
 
 
+  // todo reuse this in ledger creation tests
   @given("Ledger has been created")
   public async createLedger() {
-    if (!this.ledgerId) {
-      const createResource = await this.adminKetting.go("/")
+    if (!ledgerId) {
+      const createResource = await this.workspace.getAdmin().go("/")
         .follow("ledgers")
         .follow("https://level3.rest/patterns/list/editable#add-entry")
 
@@ -132,24 +155,21 @@ export class Fetch {
         }
       })
       const state = await newLedger.get()
-      this.ledgerId = state.data.id
-
-    setAuthorization(this.publicKetting, {ledger: this.ledgerId, roles: ["public"]})
-    setAuthorization(this.clientKetting, {ledger: this.ledgerId, roles: ["client"]})
+      ledgerId = state.data.id
     }
   }
 
 
-  @given("Client starts at root")
-  public getRoot() {
-    this.client = this.publicKetting
+  @given("Public Client starts at root")
+  public getRootAsPublicClient() {
+    this.client = this.workspace.getPublic()
     this.resource = this.client.go("/")
   }
 
 
   @given("Authenticated Client starts at root")
   public getRootAsAuthenticatedClient() {
-    this.client = this.clientKetting
+    this.client = this.workspace.getClient()
     this.resource = this.client.go("/")
   }
 
@@ -184,31 +204,36 @@ export class Fetch {
     return this.postAndFollow(JSON.parse(dataIn))
   }
 
-
-  private resetResource() {
-    return this.clientKetting.go("/")
+  private async goToLedger(ledgerName: string) {
+    this.client = this.workspace.getAdmin()
+    this.resource = await this.client.go("/")
       .follow("ledgers")
-      .follow("reset")
+    await this.followListEntry(ledgerName)
+  }
+
+  private async resetResource() {
+    await this.goToLedger("API acceptance test ledger")
+    await this.followRel("reset")
   }
 
 
-  @then(/Authenticated Client resets ledger/)
+  @then(/Admin Client resets ledger/)
   public async resetLedger() {
-    const reset = await this.resetResource()
-    await reset.post({data: {}})
+    await this.resetResource()
+    await this.resource.post({data: {}})
   }
 
 
   @then(/resets ledger to remembered event id/)
   public async resetLedgerToRememberedEvent() {
     assert.ok(this.lastEventId, "last event id not remembered")
-    const reset = await this.resetResource()
-    await reset.post({data: {after: this.lastEventId}})
+    await this.resetResource()
+    await this.resource.post({data: {after: this.lastEventId}})
   }
 
 
   private factAppender() {
-    return this.clientKetting.go("/")
+    return this.workspace.getClient().go("/")
       .follow("append")
       .follow("factual")
   }
@@ -293,7 +318,7 @@ export class Fetch {
 
 
   private atomicAppender() {
-    return this.clientKetting.go("/")
+    return this.workspace.getClient().go("/")
       .follow("append")
       .follow("atomic")
   }
@@ -354,7 +379,7 @@ export class Fetch {
 
 
   private replaySelectorResource() {
-    return this.clientKetting.go("/")
+    return this.workspace.getClient().go("/")
       .follow("selectors")
       .follow("replay")
   }
@@ -429,14 +454,14 @@ export class Fetch {
 
 
   private filterSelectorResource() {
-    return this.clientKetting.go("/")
+    return this.workspace.getClient().go("/")
       .follow("selectors")
       .follow("filter")
   }
 
 
   private downloadResource() {
-    return this.clientKetting.go("/")
+    return this.workspace.getClient().go("/")
       .follow("ledgers")
       .follow("download")
   }
@@ -826,14 +851,15 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client registers event '(.+)' in entity '(.+)'/)
+  @then(/Registrar Client registers event '(.+)' in entity '(.+)'/)
   public async registerEvent(event: string, entity: string) {
+    const entities = [entity]
     const data = {
-      entity,
-      event
+      event,
+      entities
     }
 
-    const registrar = await this.clientKetting.go("/")
+    const registrar = await this.workspace.getRegistrar().go("/")
       .follow("registry")
       .follow("register")
 
@@ -841,9 +867,9 @@ export class Fetch {
 
     const state = await registered.get()
 
-    const {entity: actualEntity, event: actualEvent} = state.data
-    assert.equal(actualEntity, entity, "not the same entity")
+    const {event: actualEvent, entities: actualEntities} = state.data
     assert.equal(actualEvent, event, "not the same event")
+    assert.deepStrictEqual(actualEntities, entities, "not the same entity")
   }
 
 
@@ -866,7 +892,7 @@ export class Fetch {
 
   @then(/Authenticated Client opens a notification channel/)
   public async openChannel() {
-    const channelOpener = await this.clientKetting.go("/")
+    const channelOpener = await this.workspace.getClient().go("/")
       .follow("notifications")
       .follow("open-channel")
 

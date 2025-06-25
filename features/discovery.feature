@@ -3,7 +3,7 @@ Feature: Look Around
 
   Background:
     Given Ledger has been created
-    And Client starts at root
+    And Public Client starts at root
 
   Scenario: Root Resource
     Then content is HAL
@@ -97,12 +97,14 @@ Feature: Look Around
 
   Scenario: Create Replay Selector Resource requires Authorization
     Given follows rels 'selectors,replay'
-    Then Client is not authorized
+    Then has L3 Lookup profile
+    And has L3 Representation profile
 
 
   Scenario: Create Filter Selector Resource requires Authorization
     Given follows rels 'selectors,filter'
-    Then Client is not authorized
+    Then has L3 Lookup profile
+    And has L3 Representation profile
 
 
   ###########
