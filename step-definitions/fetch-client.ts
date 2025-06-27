@@ -243,7 +243,9 @@ export class Fetch {
   public async appendFactEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
       event,
-      entities: {entity, keys: [key]},
+      entities: {
+        [entity]: [key]
+      },
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
@@ -256,8 +258,10 @@ export class Fetch {
   @then(/Authenticated Client fails to append fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
   public async failAppendFactEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
     const appendEvent = {
-      entities: [{entity, key}],
       event,
+      entities: {
+        [entity]: [key]
+      },
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
@@ -275,8 +279,10 @@ export class Fetch {
   @then(/Authenticated Client appends idempotency-key '(.+)', fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
   public async appendIdempotentFactEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
-      entities: [{entity, key}],
       event,
+      entities: {
+        [entity]: [key]
+      },
       idempotencyKey,
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
@@ -290,9 +296,10 @@ export class Fetch {
   @then(/Authenticated Client fails to append idempotency-key '(.+)', fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
   public async failAppendIdempotentFactEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
     const appendEvent = {
-      entity,
-      key,
       event,
+      entities: {
+        [entity]: [key]
+      },
       idempotencyKey,
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
@@ -326,9 +333,10 @@ export class Fetch {
   @then(/Authenticated Client atomically appends event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
   public async appendAtomicEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
-      entity,
-      key,
       event,
+      entities: {
+        [entity]: [key]
+      },
       meta:     JSON.parse(metaIn),
       data:     JSON.parse(dataIn),
       selector: this.lastSelector
@@ -342,9 +350,10 @@ export class Fetch {
   @then(/Authenticated Client atomically appends idempotency-key '(.+)', event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
   public async appendAtomicIdempotentEvent(idempotencyKey: string, entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
-      entity,
-      key,
       event,
+      entities: {
+        [entity]: [key]
+      },
       idempotencyKey,
       meta:     JSON.parse(metaIn),
       data:     JSON.parse(dataIn),
@@ -359,9 +368,10 @@ export class Fetch {
   @then(/Authenticated Client fails to atomically append event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)' because '(\d+)'/)
   public async failAppendAtomicEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string, expectedStatus: number) {
     const appendEvent = {
-      entity,
-      key,
       event,
+      entities: {
+        [entity]: [key]
+      },
       meta:     JSON.parse(metaIn),
       data:     JSON.parse(dataIn),
       selector: this.lastSelector
