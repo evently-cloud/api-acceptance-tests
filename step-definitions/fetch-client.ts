@@ -242,9 +242,8 @@ export class Fetch {
   @then(/Authenticated Client appends fact '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
   public async appendFactEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
-      entities: [{entity, key}],
-      key,
       event,
+      entities: {entity, keys: [key]},
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
@@ -389,8 +388,9 @@ export class Fetch {
     const selector = await this.replaySelectorResource()
     const keys = this.toList(keysIn)
     const data = {
-      entity,
-      keys
+      entities: {
+        [entity]: keys
+      }
     }
     const state = await selector.post({data})
     this.selectedEvents = await this.parseNdJsonFromState(state)
@@ -403,7 +403,9 @@ export class Fetch {
     const events = this.toList(eventsIn)
     const keys = this.toList(keysIn)
     const data = {
-      entity,
+      entities: {
+        [entity]: keys
+      },
       events,
       keys
     }
@@ -416,8 +418,9 @@ export class Fetch {
   public async replayAfterRememberedEvent(entity: string, key: string) {
     const selector = await this.replaySelectorResource()
     const data = {
-      entity,
-      keys: [key],
+      entities: {
+        [entity]: [key]
+      },
       after: this.lastSelector?.mark
     }
     const state = await selector.post({data})
@@ -430,7 +433,13 @@ export class Fetch {
     const selector = await this.replaySelectorResource()
     const events = this.toList(eventsIn)
     const keys = this.toList(keysIn)
-    const data = { entity, keys, events, limit }
+    const data = {
+      entities: {
+        [entity]: keys
+      },
+      events,
+      limit
+    }
     const state = await selector.post({data})
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
@@ -442,8 +451,9 @@ export class Fetch {
     const events = this.toList(eventsIn)
     const keys = this.toList(keysIn)
     const data = {
-      entity,
-      keys,
+      entities: {
+        [entity]: keys
+      },
       events,
       limit,
       after: this.lastSelector?.mark
