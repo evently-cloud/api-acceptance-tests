@@ -5,8 +5,8 @@ Feature: Reset ledger
     Given Ledger has been created
 
   Scenario: Reset Events to a known place
-    Given Authenticated Client resets ledger
-    And Authenticated Client registers event 'Thing Created' in entity 'tests'
+    Given Admin Client resets ledger
+    And Registrar Client registers event 'Thing Created' in entity 'tests'
     And Authenticated Client appends fact 'tests/Thing Created', key '1', meta '{}' and data '{"name":1}'
     And remembers last appended event id
     And Authenticated Client appends fact 'tests/Thing Created', key '1', meta '{}' and data '{"name":2}'

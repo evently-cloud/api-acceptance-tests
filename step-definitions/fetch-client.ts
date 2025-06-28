@@ -488,11 +488,14 @@ export class Fetch {
 
 
   @given(/Authenticated Client filters '(.+)' events with meta filter '(.+)'/)
-  public async filterEventsByMeta(entitiesIn: string, meta: string) {
+  public async filterEventsByMeta(entitiesIn: string, metaFilter: string) {
     const selector = await this.filterSelectorResource()
     const entities = this.toList(entitiesIn)
+    const meta = {query: metaFilter}
     const data = entities.reduce((acc, e) => {
-      acc[e] = {}
+      acc[e] = {
+        query: "$"
+      } // no specific events
       return acc
     }, {} as Record<string, any>)
     const sendData = { meta, data }
@@ -502,7 +505,8 @@ export class Fetch {
 
 
   @given(/Authenticated Client filters, after remembered selector mark, events with meta filter '(.+)'/)
-  public async filterEventsAfterByMeta(meta: string) {
+  public async filterEventsAfterByMeta(metaFilter: string) {
+    const meta = {query: metaFilter}
     const selector = await this.filterSelectorResource()
     const sendData = {
       meta,
@@ -514,7 +518,8 @@ export class Fetch {
 
 
   @given(/Authenticated Client filters, after remembered selector mark, (\d+) events with meta filter '(.+)'/)
-  public async filterLimitedEventsAfterByMeta(limit: number, meta: string) {
+  public async filterLimitedEventsAfterByMeta(limit: number, metaFilter: string) {
+    const meta = {query: metaFilter}
     const selector = await this.filterSelectorResource()
     const sendData = {
       meta,
