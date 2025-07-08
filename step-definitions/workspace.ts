@@ -2,8 +2,7 @@ import assert from "assert"
 import {Ketting} from "ketting"
 
 
-// This is constructed for every scenario! Not exactly what I want.
-//
+// Workspace is constructed for every scenario
 export class Workspace {
 
   public readonly eventlyUrl = process.env.EVENTLY_URL || ""

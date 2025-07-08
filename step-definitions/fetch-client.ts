@@ -18,6 +18,11 @@ type ProfileLink = Link & {
   profile?: string
 }
 
+type JsonpathQuery = {
+  query: string
+  vars?: Record<string, any>
+}
+
 type Event = {
   event:    string,
   entities: Record<string, string[]>,
@@ -48,7 +53,8 @@ function setAuthorization(ketting: Ketting, auth: AuthInfo) {
 }
 
 
-const testLedgerName = "API acceptance test ledger"
+const LEDGER_NAME = "API acceptance test ledger"
+const testLedgerName = LEDGER_NAME
 
 BeforeAll(async function() {
   const eventlyUrl = process.env.EVENTLY_URL || "NO_URL_SET"
@@ -139,6 +145,14 @@ export class Fetch {
       .map((s) => s.trim())
   }
 
+  private toEventQueries(input: string): Record<string, JsonpathQuery> {
+    return this.toList(input)
+      .reduce((acc, e) => ({
+        ...acc,
+        [e]: { query: "$" }
+      }), {})
+  }
+
 
   // todo reuse this in ledger creation tests
   @given("Ledger has been created")
@@ -150,7 +164,7 @@ export class Fetch {
 
       const newLedger = await createResource.postFollow({
         data: {
-          name:"API acceptance test ledger",
+          name:LEDGER_NAME,
           description: "Ledger used for REST API testing"
         }
       })
@@ -212,7 +226,7 @@ export class Fetch {
   }
 
   private async resetResource() {
-    await this.goToLedger("API acceptance test ledger")
+    await this.goToLedger(LEDGER_NAME)
     await this.followRel("reset")
   }
 
@@ -232,10 +246,9 @@ export class Fetch {
   }
 
 
-  private factAppender() {
+  private appender() {
     return this.workspace.getClient().go("/")
       .follow("append")
-      .follow("factual")
   }
 
 
@@ -249,7 +262,7 @@ export class Fetch {
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
-    const appender = await this.factAppender()
+    const appender = await this.appender()
     const appendResult = await appender.post({data: appendEvent})
     this.appendedEvent = appendResult.data
   }
@@ -265,7 +278,7 @@ export class Fetch {
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
-    const appender = await this.factAppender()
+    const appender = await this.appender()
 
     try {
       await appender.post({data: appendEvent})
@@ -287,7 +300,7 @@ export class Fetch {
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
-    const appender = await this.factAppender()
+    const appender = await this.appender()
     const appendResult = await appender.post({data: appendEvent})
     this.appendedEvent = appendResult.data
   }
@@ -304,7 +317,7 @@ export class Fetch {
       meta: JSON.parse(metaIn),
       data: JSON.parse(dataIn)
     }
-    const appender = await this.factAppender()
+    const appender = await this.appender()
     try {
       await appender.post({data: appendEvent})
       assert.fail("should have failed to append fact")
@@ -323,13 +336,6 @@ export class Fetch {
   }
 
 
-  private atomicAppender() {
-    return this.workspace.getClient().go("/")
-      .follow("append")
-      .follow("atomic")
-  }
-
-
   @then(/Authenticated Client atomically appends event '(.+)\/(.+)', key '(.+)', meta '(.+)' and data '(.+)'/)
   public async appendAtomicEvent(entity: string, event: string, key: string, metaIn: string, dataIn: string) {
     const appendEvent = {
@@ -341,7 +347,7 @@ export class Fetch {
       data:     JSON.parse(dataIn),
       selector: this.lastSelector
     }
-    const appender = await this.atomicAppender()
+    const appender = await this.appender()
     const appendResult = await appender.post({data: appendEvent})
     this.appendedEvent = appendResult.data
   }
@@ -357,9 +363,9 @@ export class Fetch {
       idempotencyKey,
       meta:     JSON.parse(metaIn),
       data:     JSON.parse(dataIn),
-      selector:       this.lastSelector
+      selector: this.lastSelector
     }
-    const appender = await this.atomicAppender()
+    const appender = await this.appender()
     const appendResult = await appender.post({data: appendEvent})
     this.appendedEvent = appendResult.data
   }
@@ -376,7 +382,7 @@ export class Fetch {
       data:     JSON.parse(dataIn),
       selector: this.lastSelector
     }
-    const appender = await this.atomicAppender()
+    const appender = await this.appender()
 
     try {
       await appender.post({data: appendEvent})
@@ -387,15 +393,9 @@ export class Fetch {
   }
 
 
-  private replaySelectorResource() {
-    return this.workspace.getClient().go("/")
-      .follow("selectors")
-      .follow("replay")
-  }
-
   @then(/Authenticated Client replays all events for '(.+)', keys '(.+)'/)
   public async replayAllEvents(entity: string, keysIn: string) {
-    const selector = await this.replaySelectorResource()
+    const selector = await this.selectorResource()
     const keys = this.toList(keysIn)
     const data = {
       entities: {
@@ -409,15 +409,14 @@ export class Fetch {
 
   @then(/Authenticated Client replays '(.+)' events for '(.+)', keys '(.+)'/)
   public async replaySpecificEvents(eventsIn: string, entity: string, keysIn: string) {
-    const selector = await this.replaySelectorResource()
-    const events = this.toList(eventsIn)
+    const selector = await this.selectorResource()
+    const events = this.toEventQueries(eventsIn)
     const keys = this.toList(keysIn)
     const data = {
       entities: {
         [entity]: keys
       },
-      events,
-      keys
+      events
     }
     const state = await selector.post({data})
     this.selectedEvents = await this.parseNdJsonFromState(state)
@@ -426,7 +425,7 @@ export class Fetch {
 
   @then(/Authenticated Client replays all '(.+)' events, key '(.+)' after remembered selector mark/)
   public async replayAfterRememberedEvent(entity: string, key: string) {
-    const selector = await this.replaySelectorResource()
+    const selector = await this.selectorResource()
     const data = {
       entities: {
         [entity]: [key]
@@ -440,8 +439,8 @@ export class Fetch {
 
   @then(/Authenticated Client replays (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
   public async replayEventsWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
-    const selector = await this.replaySelectorResource()
-    const events = this.toList(eventsIn)
+    const selector = await this.selectorResource()
+    const events = this.toEventQueries(eventsIn)
     const keys = this.toList(keysIn)
     const data = {
       entities: {
@@ -457,8 +456,8 @@ export class Fetch {
 
   @then(/Authenticated Client replays, after remembered selector mark, (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
   public async replayEventsAfterMarkWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
-    const selector = await this.replaySelectorResource()
-    const events = this.toList(eventsIn)
+    const selector = await this.selectorResource()
+    const events = this.toEventQueries(eventsIn)
     const keys = this.toList(keysIn)
     const data = {
       entities: {
@@ -473,23 +472,21 @@ export class Fetch {
   }
 
 
-  private filterSelectorResource() {
+  private selectorResource() {
     return this.workspace.getClient().go("/")
       .follow("selectors")
-      .follow("filter")
   }
 
 
-  private downloadResource() {
-    return this.workspace.getClient().go("/")
-      .follow("ledgers")
-      .follow("download")
+  private async downloadResource() {
+    await this.goToLedger(LEDGER_NAME)
+    await this.followRel("download")
   }
 
-
+  // todo does this actually work?
   @given(/Authenticated Client filters '(.+)' events with meta filter '(.+)'/)
   public async filterEventsByMeta(entitiesIn: string, metaFilter: string) {
-    const selector = await this.filterSelectorResource()
+    const selector = await this.selectorResource()
     const entities = this.toList(entitiesIn)
     const meta = {query: metaFilter}
     const data = entities.reduce((acc, e) => {
@@ -507,7 +504,7 @@ export class Fetch {
   @given(/Authenticated Client filters, after remembered selector mark, events with meta filter '(.+)'/)
   public async filterEventsAfterByMeta(metaFilter: string) {
     const meta = {query: metaFilter}
-    const selector = await this.filterSelectorResource()
+    const selector = await this.selectorResource()
     const sendData = {
       meta,
       after: this.lastSelector?.mark
@@ -520,7 +517,7 @@ export class Fetch {
   @given(/Authenticated Client filters, after remembered selector mark, (\d+) events with meta filter '(.+)'/)
   public async filterLimitedEventsAfterByMeta(limit: number, metaFilter: string) {
     const meta = {query: metaFilter}
-    const selector = await this.filterSelectorResource()
+    const selector = await this.selectorResource()
     const sendData = {
       meta,
       limit,
@@ -531,35 +528,43 @@ export class Fetch {
   }
 
 
+  /*
+  Producing:
+  {
+  "Store": {
+    "Item Stocked": "$.sku ? (@ == \"Limes\")"
+  }
+  Should be just
+  {
+    "Item Stocked": "$.sku ? (@ == \"Limes\")"
+  }
+}
+   */
   private tableToFilters(table: DataTable) {
     return table.hashes()
-      .reduce((acc, f) => {
-        const entity = acc[f.entity] || {}
-        if (Object.keys(entity).length === 0) {
-          acc[f.entity] = entity
-        }
-        entity[f.event] = f.filter
-        return acc
-      },
-      {} as Record<string, any>)
+      .reduce((acc, f) => ({
+        ...acc,
+        [f.event]: { query: f.filter }
+      }),
+      {} as Record<string, JsonpathQuery>)
   }
 
 
   @given(/Authenticated Client filters all data events/)
   public async filterAllEventsByData(table: DataTable) {
-    const selector = await this.filterSelectorResource()
+    const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
-    const state = await selector.post({data: {data: filters}})
+    const state = await selector.post({data: {events: filters}})
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
 
 
   @given(/Authenticated Client filters data events, after remembered event/)
   public async filterEventsByDataAfterMark(table: DataTable) {
-    const selector = await this.filterSelectorResource()
+    const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
     const state = await selector.post({data: {
-        data: filters,
+        events: filters,
         after: this.lastSelector?.mark
       }
     })
@@ -569,10 +574,10 @@ export class Fetch {
 
   @given(/Authenticated Client filters (\d+) data events, after remembered event/)
   public async filterLimitedEventsByDataAfterMark(limit: number, table: DataTable) {
-    const selector = await this.filterSelectorResource()
+    const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
     const state = await selector.post({data: {
-        data: filters,
+        events: filters,
         after: this.lastSelector?.mark,
         limit
       }
@@ -581,34 +586,34 @@ export class Fetch {
   }
 
 
-  @given(/Authenticated Client downloads entire ledger/)
+  @given(/Admin Client downloads entire ledger/)
   public async downloadAll() {
-    const download = await this.downloadResource()
-    const state = await download.post({data: {}})
+    await this.downloadResource()
+    const state = await this.resource.post({data: {}})
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
 
 
-  @given(/Authenticated Client downloads ledger after last appended event/)
+  @given(/Admin Client downloads ledger after last appended event/)
   public async downloadAfter() {
-    const download = await this.downloadResource()
-    const state = await download.post({data: {after: this.lastEventId}})
+    await this.downloadResource()
+    const state = await this.resource.post({data: {after: this.lastEventId}})
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
 
 
-  @given(/Authenticated Client downloads (\d+) events/)
+  @given(/Admin Client downloads (\d+) events/)
   public async downloadLimit(limit: number) {
-    const download = await this.downloadResource()
-    const state = await download.post({data: {limit}})
+    await this.downloadResource()
+    const state = await this.resource.post({data: {limit}})
     this.selectedEvents = await this.parseNdJsonFromState(state)
   }
 
 
-  @given(/Authenticated Client downloads, after last appended event, (\d+) events/)
+  @given(/Admin Client downloads, after last appended event, (\d+) events/)
   public async downloadLimitAfter(limit: number) {
-    const download = await this.downloadResource()
-    const state = await download.post({data: {
+    await this.downloadResource()
+    const state = await this.resource.post({data: {
         limit,
         after: this.lastEventId
       }

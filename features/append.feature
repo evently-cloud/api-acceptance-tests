@@ -3,20 +3,20 @@ Feature: Append Events
 
   Background: Prepare for tests
     Given Ledger has been created
-    And Authenticated Client resets ledger
-    And Authenticated Client registers event 'Item Stocked' in entity 'Store'
-    And Authenticated Client registers event 'Item Added' in entity 'Cart'
-    And Authenticated Client registers event 'Item Removed' in entity 'Cart'
-    And Authenticated Client registers event 'Cart Purchased' in entity 'Cart'
+    And Admin Client resets ledger
+    And Registrar Client registers event 'Item Stocked' in entity 'Store'
+    And Registrar Client registers event 'Item Added' in entity 'Cart'
+    And Registrar Client registers event 'Item Removed' in entity 'Cart'
+    And Registrar Client registers event 'Cart Purchased' in entity 'Cart'
 
 
   Scenario: Cannot append unregistered fact
     Given Authenticated Client fails to append fact 'Store/Alarm Triggered', key 'Vancouver', meta '{}' and data '{}' because '403'
 
 
-  Scenario: Discover factual append form
+  Scenario: Discover append form
     Given Authenticated Client starts at root
-    And follows rels 'append,factual'
+    And follows rels 'append'
     Then content is JSON Schema
     And has L3 Form profile
 
@@ -37,14 +37,6 @@ Feature: Append Events
       | Store   | Item Stocked        | Vancouver | {"clerk":"Ami"}   | {"sku":"Chocolate_Cookie"}  |
       | Store   | Item Stocked        | Vancouver | {"clerk":"Marc"}  | {"sku":"Peanuts"}           |
       | Store   | Item Stocked        | Vancouver | {"clerk":"Marc"}  | {"sku":"Carrots"}           |
-
-
-
-  Scenario: Discover atomic append form
-    Given Authenticated Client starts at root
-    And follows rels 'append,atomic'
-    Then content is JSON Schema
-    And has L3 Form profile
 
 
   Scenario: Append atomic events
@@ -80,8 +72,8 @@ Feature: Append Events
 
   Scenario: Atomically append events with a data filter selector
     Given Authenticated Client filters all data events
-      | entity        | event         | filter                  |
-      | Store         | Item Stocked  | $.sku ? (@ == "Limes")  |
+      | event         | filter                  |
+      | Item Stocked  | $.sku ? (@ == "Limes")  |
     And remembers selector
     When Authenticated Client atomically appends event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Limes"}'
     Then Authenticated Client fails to atomically append event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Limes"}' because '409'

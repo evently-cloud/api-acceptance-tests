@@ -3,11 +3,11 @@ Feature: Notifications
 
   Background: Set up data for tests
     Given Ledger has been created
-    And Authenticated Client resets ledger
-    And Authenticated Client registers event 'Match Started' in entity 'Tennis Match'
-    And Authenticated Client registers event 'Ball Served' in entity 'Tennis Match'
-    And Authenticated Client registers event 'Ball Returned' in entity 'Tennis Match'
-    And Authenticated Client registers event 'Ball Out' in entity 'Tennis Match'
+    And Admin Client resets ledger
+    And Registrar Client registers event 'Match Started' in entity 'Tennis Match'
+    And Registrar Client registers event 'Ball Served' in entity 'Tennis Match'
+    And Registrar Client registers event 'Ball Returned' in entity 'Tennis Match'
+    And Registrar Client registers event 'Ball Out' in entity 'Tennis Match'
     Then Authenticated Client appends facts
       | entity        | event         | key         | meta            | data                          |
       | Tennis Match  | Match Started | 2023-01-07  | {"command": 1}  | {"players": ["Kal", "Char"]}  |
@@ -53,8 +53,8 @@ Feature: Notifications
   Scenario: Subscribe to a filter selector
     Given Authenticated Client opens a notification channel
     And Authenticated Client filters all data events
-      | entity        | event         | filter                    |
-      | Tennis Match  | Ball Served   | $.player ? (@ == "Char")  |
+      | event         | filter                    |
+      | Ball Served   | $.player ? (@ == "Char")  |
     And remembers selector
     When Authenticated Client subscribes to selector
     And content is HAL

@@ -7,10 +7,10 @@ Feature: Download Ledgers
 
   Background: Set up data for tests
     Given Ledger has been created
-    And Authenticated Client resets ledger
-    And Authenticated Client registers event 'Light Switched On' in entity 'Things'
-    And Authenticated Client registers event 'Light Switched Off' in entity 'Things'
-    And Authenticated Client registers event 'Ball Bounced' in entity 'Things'
+    And Admin Client resets ledger
+    And Registrar Client registers event 'Light Switched On' in entity 'Things'
+    And Registrar Client registers event 'Light Switched Off' in entity 'Things'
+    And Registrar Client registers event 'Ball Bounced' in entity 'Things'
     Then Authenticated Client appends facts
       | entity  | event               | key     | meta  | data                    |
       | Things  | Light Switched On   | kitchen | {}    | {"light visible":true}  |
@@ -20,9 +20,9 @@ Feature: Download Ledgers
       | Things  | Ball Bounced        | red     | {}    | {"height":10}           |
 
   Scenario: Download all events
-    When Authenticated Client downloads entire ledger
-    # Events includes first event -- Ledger Created
-    Then Event count is 6
+    When Admin Client downloads entire ledger
+    # Events includes first event -- Ledger Created and the Event Registered ones
+    Then Event count is 9
     And last Event is 'Ball Bounced'
 
   Scenario: Download events after a mark
@@ -33,13 +33,13 @@ Feature: Download Ledgers
       | Things  | Light Switched On   | kitchen | {}    | {"light visible":true}  |
       | Things  | Ball Bounced        | red     | {}    | {"height":10}           |
       | Things  | Light Switched Off  | kitchen | {}    | {}                      |
-    And Authenticated Client downloads ledger after last appended event
+    And Admin Client downloads ledger after last appended event
     Then Event count is 3
     And last Event is 'Light Switched Off'
 
   Scenario: Download limited events
-    When Authenticated Client downloads 2 events
-    Then Event count is 2
+    When Admin Client downloads 5 events
+    Then Event count is 5
     And last Event is 'Light Switched On'
 
   Scenario: Download limited events after a mark
@@ -51,6 +51,6 @@ Feature: Download Ledgers
       | Things  | Ball Bounced        | red     | {}    | {"height":10}           |
       | Things  | Light Switched Off  | kitchen | {}    | {}                      |
       | Things  | Ball Bounced        | yellow  | {}    | {"height":5}           |
-    And Authenticated Client downloads, after last appended event, 2 events
+    And Admin Client downloads, after last appended event, 2 events
     Then Event count is 2
     And last Event is 'Ball Bounced'

@@ -56,7 +56,7 @@ Feature: Registry
 
 
   Scenario: Delete an entity event type
-    Given Authenticated Client resets ledger
+    Given Admin Client resets ledger
     And Authenticated Client starts at root
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'

@@ -23,22 +23,6 @@ Feature: Look Around
 
   Scenario: Append Resource
     Given follows rel 'append'
-    Then content is HAL
-    And has L3 Home profile
-    And has links
-      | rel     | href            | title                                               | profile                           |
-      | factual | /append/fact    | Append Factual Events                               | https://level3.rest/profiles/form |
-      | atomic  | /append/atomic  | Atomically Append Events Given a Selector Condition | https://level3.rest/profiles/form |
-
-
-  Scenario: Append Fact Resource
-    Given follows rels 'append,factual'
-    Then has L3 Form profile
-    And content is JSON Schema
-
-
-  Scenario: Append Atomic Resource
-    Given follows rels 'append,atomic'
     Then has L3 Form profile
     And content is JSON Schema
 
@@ -85,26 +69,9 @@ Feature: Look Around
   # Selectors
   ###########
 
-  Scenario: Selectors Resource
+  Scenario: Selectors Resource requires Authorization
     Given follows rel 'selectors'
-    Then has L3 Home profile
-    And content is HAL
-    And has links
-      | rel     | href               | title                              | profile                             |
-      | replay  | /selectors/replay  | Replay an Entity's Events          | https://level3.rest/profiles/lookup |
-      | filter  | /selectors/filter  | Select Events With a Filter Query  | https://level3.rest/profiles/lookup |
-
-
-  Scenario: Create Replay Selector Resource requires Authorization
-    Given follows rels 'selectors,replay'
-    Then has L3 Lookup profile
-    And has L3 Representation profile
-
-
-  Scenario: Create Filter Selector Resource requires Authorization
-    Given follows rels 'selectors,filter'
-    Then has L3 Lookup profile
-    And has L3 Representation profile
+    Then Client is not authorized
 
 
   ###########
