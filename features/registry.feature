@@ -5,14 +5,14 @@ Feature: Registry
     Given Ledger has been created
 
   Scenario: Discover registry
-    Given Authenticated Client starts at root
+    Given Registrar Client starts at root
     And follows rels 'registry,entities'
     Then has L3 Home profile
     And has L3 List Resource profile
     And content is HAL
     And has links
-      | rel                                                  | href                     | title                    | profile                           |
-      | https://level3.rest/patterns/list/editable#add-entry | /registry/register-event | Register an Entity Event | https://level3.rest/profiles/form |
+      | rel                                                  | href                     | title             | profile                           |
+      | https://level3.rest/patterns/list/editable#add-entry | /registry/register-event | Register an Event | https://level3.rest/profiles/form |
 
 
   Scenario: Register an Event type twice is OK
@@ -21,7 +21,7 @@ Feature: Registry
 
 
   Scenario: Examine an entity
-    Given Authenticated Client starts at root
+    Given Registrar Client starts at root
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     Then has L3 Home profile
@@ -29,12 +29,12 @@ Feature: Registry
     And has L3 Entry Resource profile
     And content is HAL
     And has links
-      | rel                                                  | href                     | title                    | profile                           |
-      | https://level3.rest/patterns/list/editable#add-entry | /registry/register-event | Register an Entity Event | https://level3.rest/profiles/form |
+      | rel                                                  | href                     | title             | profile                           |
+      | https://level3.rest/patterns/list/editable#add-entry | /registry/register-event | Register an Event | https://level3.rest/profiles/form |
 
 
   Scenario: Examine an entity event
-    Given Authenticated Client starts at root
+    Given Registrar Client starts at root
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
@@ -48,16 +48,15 @@ Feature: Registry
 
   Scenario: Cannot delete an event type when ledger has events using it
     Given Authenticated Client appends fact 'tests/Registration Tested', key 'a', meta '{}' and data '{"msg":"just a test"}'
-    And Authenticated Client starts at root
+    And Registrar Client starts at root
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
     Then fails to delete the resource because of status 422
 
-
+# todo fix previous scenario and this next one will pass
   Scenario: Delete an entity event type
-    Given Admin Client resets ledger
-    And Authenticated Client starts at root
+    Given Registrar Client starts at root
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'

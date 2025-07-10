@@ -196,6 +196,13 @@ export class Fetch {
   }
 
 
+  @given("Registrar Client starts at root")
+  public getRootAsRegistrarClient() {
+    this.client = this.workspace.getRegistrar()
+    this.resource = this.client.go("/")
+  }
+
+
   @given("Admin Client starts at root")
   public getRootAsAdminClient() {
     this.client = this.workspace.getAdmin()
