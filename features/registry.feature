@@ -16,8 +16,8 @@ Feature: Registry
 
 
   Scenario: Register an Event type twice is OK
-    Given Authenticated Client registers event 'Registration Tested' in entity 'tests'
-    Then Authenticated Client registers event 'Registration Tested' in entity 'tests'
+    Given Registrar Client registers event 'Registration Tested' in entity 'tests'
+    Then Registrar Client registers event 'Registration Tested' in entity 'tests'
 
 
   Scenario: Examine an entity

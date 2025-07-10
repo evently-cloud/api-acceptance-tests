@@ -47,9 +47,14 @@ type AuthInfo = {
 // share the ledgerId created in BeforeAll with the tests
 let ledgerId: string | undefined
 
+
+function generateAuthToken(auth: AuthInfo) {
+  return Buffer.from(JSON.stringify(auth)).toString("base64url")
+}
+
 function setAuthorization(ketting: Ketting, auth: AuthInfo) {
-  const authHeader = Buffer.from(JSON.stringify(auth)).toString("base64url")
-  ketting.use(bearerAuth(authHeader))
+  const authToken = generateAuthToken(auth)
+  ketting.use(bearerAuth(authToken))
 }
 
 
@@ -79,7 +84,7 @@ BeforeAll(async function() {
 @binding([Workspace])
 export class Fetch {
 
-  private clientToken: string = "NONE"
+  private clientToken: string = "NO CLIENT TOKEN SET"
   private client: Ketting
 
   // @ts-ignore // it will be set
@@ -104,8 +109,11 @@ export class Fetch {
     workspace.publicKetting = new Ketting(workspace.eventlyUrl)
     setAuthorization(this.workspace.getPublic(), {ledger: ledgerId, roles: ["public"]})
     workspace.clientKetting = new Ketting(workspace.eventlyUrl)
-    setAuthorization(this.workspace.getClient(), {ledger: ledgerId, roles: ["client"]})
+    const clientAuthDetails = {ledger: ledgerId, roles: ["client"]}
+    setAuthorization(this.workspace.getClient(),clientAuthDetails )
     this.client = workspace.getPublic()
+    // needed by NOTIFY tests, which don't use Ketting
+    this.clientToken = generateAuthToken(clientAuthDetails)
   }
 
 
@@ -164,7 +172,7 @@ export class Fetch {
 
       const newLedger = await createResource.postFollow({
         data: {
-          name:LEDGER_NAME,
+          name: LEDGER_NAME,
           description: "Ledger used for REST API testing"
         }
       })
@@ -188,6 +196,13 @@ export class Fetch {
   }
 
 
+  @given("Admin Client starts at root")
+  public getRootAsAdminClient() {
+    this.client = this.workspace.getAdmin()
+    this.resource = this.client.go("/")
+  }
+
+
   @given(/follows rel '(.+)'/)
   public async followRel(rel: string) {
     this.resource = await this.resource.follow(rel)
@@ -200,6 +215,12 @@ export class Fetch {
     for (const rel of relList) {
       await this.followRel(rel)
     }
+  }
+
+
+  @given(/follows link to current ledger/)
+  public async followCurrentLedger() {
+    await this.goToLedger(LEDGER_NAME)
   }
 
 
@@ -823,7 +844,9 @@ export class Fetch {
       const actualLink = actual.get(rel) as ProfileLink
       assert.ok(actualLink, `missing link ${rel}`)
       const {href: actualHref, title: actualTitle, profile: actualProfile} = actualLink
-      assert.equal(actualHref, href, "Wrong Link HREF")
+      if (href) {
+        assert.equal(actualHref, href, "Wrong Link HREF")
+      }
       if (title) {
         assert.equal(actualTitle, title, "Wrong Link TITLE")
       }
@@ -929,7 +952,7 @@ export class Fetch {
     this.channel = await channelOpener.postFollow({data:{}})
     this.resource = this.channel
     const stream = await this.channel.follow("stream")
-    this.eventSource = new EventSource(stream?.uri || "FAIL", {
+    this.eventSource = new EventSource(stream?.uri || "NO URI FOR STREAM", {
       fetch: (url, init) =>
         fetch(url, {
           ...init,

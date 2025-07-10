@@ -1,4 +1,4 @@
-Feature: Look Around
+Feature: Public Look Around
   Test the public endpoints
 
   Background:
@@ -75,7 +75,7 @@ Feature: Look Around
 
 
   ###########
-  # Selectors
+  # Notifications
   ###########
 
   Scenario: Notifications Resource
