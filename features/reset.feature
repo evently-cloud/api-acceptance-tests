@@ -10,10 +10,13 @@ Feature: Reset ledger
     And Authenticated Client appends fact 'tests/Thing Created', key '1', meta '{}' and data '{"name":1}'
     And remembers last appended event id
     And Authenticated Client appends fact 'tests/Thing Created', key '1', meta '{}' and data '{"name":2}'
-    And Authenticated Client starts at root
+    And Admin Client starts at root
     And follows rel 'ledgers'
+    And follows list entry with name 'API acceptance test ledger'
+    # This isn't going to be accurate because the count is an estimate, not the actual count.
     And body has field 'count' with value '2'
     When resets ledger to remembered event id
-    And Authenticated Client starts at root
+    And Admin Client starts at root
     Then follows rel 'ledgers'
+    And follows list entry with name 'API acceptance test ledger'
     And body has field 'count' with value '1'
