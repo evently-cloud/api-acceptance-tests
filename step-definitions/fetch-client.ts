@@ -986,8 +986,7 @@ export class Fetch {
   public async notificationMatchesIdAndSelector() {
     // wait for notification to arrive
     await scheduler.wait(100)
-    const expectedSseMark = `${this.lastEventId.substring(0, 16)}${this.lastEventId.slice(-8)}`
-    assert.equal(expectedSseMark, this.sseMark)
+    assert.equal(this.lastEventId, this.sseMark)
     assert.ok(this.sseSelectorsTriggered.includes(this.subscribedSelector?.selectorId || ""))
   }
 }
