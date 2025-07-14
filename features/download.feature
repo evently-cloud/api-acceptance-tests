@@ -50,7 +50,28 @@ Feature: Download Ledgers
       | Things  | Light Switched On   | kitchen | {}    | {"light visible":true}  |
       | Things  | Ball Bounced        | red     | {}    | {"height":10}           |
       | Things  | Light Switched Off  | kitchen | {}    | {}                      |
-      | Things  | Ball Bounced        | yellow  | {}    | {"height":5}           |
+      | Things  | Ball Bounced        | yellow  | {}    | {"height":5}            |
     And Admin Client downloads, after last appended event, 2 events
     Then Event count is 2
     And last Event is 'Ball Bounced'
+
+
+  Scenario: Download from current link with new append
+    Given Admin Client downloads entire ledger
+    And remembers 'current' link
+    When Authenticated Client appends fact 'Thinks/Light Switched On', key 'bathroom', meta '{}' and data '{}'
+    And Admin client gets remembered link
+    Then Event count is 1
+    And last Event is 'Light Switched On'
+
+
+  Scenario: Download from current link with no new appends
+    Given Admin Client downloads entire ledger
+    And remembers 'current' link
+    When Admin client gets remembered link
+    Then Event count is 0
+    # Do this twice, it's returning an incorrect current link value that starts at the beginning
+    And remembers 'current' link
+    When Admin client gets remembered link
+    Then Event count is 0
+

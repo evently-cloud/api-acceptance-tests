@@ -39,6 +39,10 @@ function isEvent(input: any): input is Event {
   return input.event
 }
 
+function isSelector(input: any): input is Selector {
+  return input.selectorId
+}
+
 type AuthInfo = {
   ledger?: string,
   roles: string[]
@@ -92,6 +96,8 @@ export class Fetch {
   private appendedEvent: any = null
   private lastEventId: string = ""
   private lastSelector: Selector | undefined
+  private currentState: State | undefined
+  private rememberedLink: Link | undefined
   private selectedEvents: Array<Selector | Event> = []
   private channel: Resource | undefined
   private subscribedSelector: Selector | undefined
@@ -138,9 +144,10 @@ export class Fetch {
   }
 
 
-  private async parseNdJsonFromState(state: State): Promise<Event[]> {
+  private async processSelectorDownloadResult(state: State) {
+    this.currentState = state
     const ndJson = await state.data.text()
-    return ndJson
+    this.selectedEvents = ndJson
       .split("\n")
       .filter((r: string) => r.length)
       .map(JSON.parse)
@@ -431,7 +438,7 @@ export class Fetch {
       }
     }
     const state = await selector.post({data})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -447,7 +454,7 @@ export class Fetch {
       events
     }
     const state = await selector.post({data})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -461,7 +468,7 @@ export class Fetch {
       after: this.lastSelector?.mark
     }
     const state = await selector.post({data})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -478,7 +485,7 @@ export class Fetch {
       limit
     }
     const state = await selector.post({data})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -496,7 +503,7 @@ export class Fetch {
       after: this.lastSelector?.mark
     }
     const state = await selector.post({data})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -525,8 +532,8 @@ export class Fetch {
     }, {} as Record<string, any>)
     const sendData = { meta, data }
     const state = await selector.post({data: sendData})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
-  }
+    await this.processSelectorDownloadResult(state)
+ }
 
 
   @given(/Authenticated Client filters, after remembered selector mark, events with meta filter '(.+)'/)
@@ -538,7 +545,7 @@ export class Fetch {
       after: this.lastSelector?.mark
     }
     const state = await selector.post({data: sendData})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -552,7 +559,7 @@ export class Fetch {
       after: this.lastSelector?.mark
     }
     const state = await selector.post({data: sendData})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -583,7 +590,7 @@ export class Fetch {
     const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
     const state = await selector.post({data: {events: filters}})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -596,7 +603,7 @@ export class Fetch {
         after: this.lastSelector?.mark
       }
     })
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -610,7 +617,7 @@ export class Fetch {
         limit
       }
     })
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -618,7 +625,7 @@ export class Fetch {
   public async downloadAll() {
     await this.downloadResource()
     const state = await this.resource.post({data: {}})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -626,7 +633,7 @@ export class Fetch {
   public async downloadAfter() {
     await this.downloadResource()
     const state = await this.resource.post({data: {after: this.lastEventId}})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -634,7 +641,7 @@ export class Fetch {
   public async downloadLimit(limit: number) {
     await this.downloadResource()
     const state = await this.resource.post({data: {limit}})
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
@@ -646,18 +653,25 @@ export class Fetch {
         after: this.lastEventId
       }
     })
-    this.selectedEvents = await this.parseNdJsonFromState(state)
+    await this.processSelectorDownloadResult(state)
   }
 
 
+  @given(/Admin client gets remembered link/)
+  public async getRememberedLink() {
+    this.resource = this.workspace.getAdmin().go(this.rememberedLink?.href)
+    const state = await this.fetch()
+    await this.processSelectorDownloadResult(state)
+  }
+
   @then(/Event count is (\d+)/)
   public async countSelectedEvents(expectedCount: number) {
-    // deduct footer row from event count
     const lastRow = this.selectedEvents.at(-1)
     const length = this.selectedEvents.length
-    const actualCount = isEvent(lastRow)
-      ? length
-      : length - 1
+    // deduct footer row from event count, if present
+    const actualCount = lastRow && isSelector(lastRow)
+      ? length - 1
+      : length
     assert.equal(actualCount, expectedCount)
   }
 
@@ -716,6 +730,12 @@ export class Fetch {
   @then(/remembers last appended event id/)
   public async rememberLastAppendedEventId() {
     this.lastEventId = this.appendedEvent.eventId
+  }
+
+
+  @then(/remembers '(.+)' link/)
+  public async rememberLink(linkName: string) {
+    this.rememberedLink = this.currentState?.links.get("current")
   }
 
 
