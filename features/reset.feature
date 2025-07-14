@@ -13,7 +13,6 @@ Feature: Reset ledger
     And Admin Client starts at root
     And follows rel 'ledgers'
     And follows list entry with name 'API acceptance test ledger'
-    # This isn't going to be accurate because the count is an estimate, not the actual count.
     And body has field 'count' with value '2'
     When resets ledger to remembered event id
     And Admin Client starts at root

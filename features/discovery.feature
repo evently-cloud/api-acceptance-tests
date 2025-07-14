@@ -9,12 +9,12 @@ Feature: Public Look Around
     Then content is HAL
     And has L3 Home profile
     And has links
-      | rel           | href        | title                                 | profile                           |
-      | append        | /append     | Append Events to the Ledger           | https://level3.rest/profiles/home |
-      | ledgers       | /ledgers    | Manage the Ledger                     | https://level3.rest/profiles/home |
-      | notifications | /notify     | Event notifications from Selectors    | https://level3.rest/profiles/home |
-      | registry      | /registry   | Register Entity Events for the Ledger | https://level3.rest/profiles/home |
-      | selectors     | /selectors  | Selects Events From the Ledger        | https://level3.rest/profiles/home |
+      | rel           | href        | title                                 | profile                             |
+      | append        | /append     | Append Events to the Ledger           | https://level3.rest/profiles/form   |
+      | ledgers       | /ledgers    | Manage the Ledger                     | https://level3.rest/profiles/home   |
+      | notifications | /notify     | Event notifications from Selectors    | https://level3.rest/profiles/home   |
+      | registry      | /registry   | Register Entity Events for the Ledger | https://level3.rest/profiles/home   |
+      | selectors     | /selectors  | Selects Events From the Ledger        | https://level3.rest/profiles/lookup |
 
 
   #########
@@ -45,9 +45,9 @@ Feature: Public Look Around
     Then has L3 Home profile
     And content is HAL
     And has links
-      | rel       | href                      | title                              | profile                           |
-      | register  | /registry/register-event  | Register an Event                  | https://level3.rest/profiles/form |
-      | entities  | /registry/entities        | Registered Events scoped by Entity | https://level3.rest/profiles/home |
+      | rel       | href                      | title                              | profile                                          |
+      | register  | /registry/register-event  | Register an Event                  | https://level3.rest/profiles/form                |
+      | entities  | /registry/entities        | Registered Events scoped by Entity | https://level3.rest/patterns/list#list-resource  |
 
 
   Scenario: Register Event Resource

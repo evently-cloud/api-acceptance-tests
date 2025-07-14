@@ -16,7 +16,7 @@ Feature: Append Events
 
   Scenario: Discover append form
     Given Authenticated Client starts at root
-    And follows rels 'append'
+    And follows rel 'append'
     Then content is JSON Schema
     And has L3 Form profile
 

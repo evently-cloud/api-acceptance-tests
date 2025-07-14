@@ -777,6 +777,12 @@ export class Fetch {
   }
 
 
+  @then(/has L3 Info profile/)
+  public async hasInfoProfile() {
+    await this.hasProfile("https://level3.rest/profiles/info", ["GET", "HEAD"])
+  }
+
+
   @then(/has L3 Nexus profile/)
   public async hasNexusProfile() {
     await this.hasProfile("https://level3.rest/profiles/nexus", ["GET", "HEAD", "DELETE"])

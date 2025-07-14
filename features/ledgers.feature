@@ -30,7 +30,7 @@ Feature: Ledgers
 
     Scenario: Discover download ledger
       Given follows list entry with name 'API acceptance test ledger'
-      Given follows rels 'download'
+      Given follows rel 'download'
       Then has L3 Lookup profile
       And has L3 Representation profile
       And content is JSON Schema

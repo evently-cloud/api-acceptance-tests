@@ -28,7 +28,7 @@ Feature: Notifications
     And has notify links
       | rel           | href                      | title                                                                                                                           | profile                           |
       | subscribe     | /notify/CID/subscribe     | Subscribe to selector notifications in this channel                                                                             | https://level3.rest/profiles/form |
-      | subscriptions | /notify/CID/subscriptions | Selectors currently subscribed to on this channel                                                                               | https://level3.rest/profiles/form |
+      | subscriptions | /notify/CID/subscriptions | Selectors currently subscribed to on this channel                                                                               | https://level3.rest/profiles/info |
       | stream        | /notify/CID/sse           | Notification stream, provided with Server-Sent Events. See https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events  |                                   |
     And closes channel
 

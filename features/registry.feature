@@ -7,7 +7,7 @@ Feature: Registry
   Scenario: Discover registry
     Given Registrar Client starts at root
     And follows rels 'registry,entities'
-    Then has L3 Home profile
+    Then has L3 Info profile
     And has L3 List Resource profile
     And content is HAL
     And has links
@@ -24,7 +24,7 @@ Feature: Registry
     Given Registrar Client starts at root
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'
-    Then has L3 Home profile
+    Then has L3 Info profile
     And has L3 List Resource profile
     And has L3 Entry Resource profile
     And content is HAL
@@ -42,8 +42,9 @@ Feature: Registry
     And has L3 Entry Resource profile
     And content is HAL
     And has links
-      | rel           | href    | title             | profile                           |
-      | append-event  | /append | Append Events API | https://level3.rest/profiles/form |
+      | rel                                     | href              | title                     | profile                                         |
+      | append-event                            | /append           | Append Events API         | https://level3.rest/profiles/form               |
+      | https://level3.rest/patterns/list#list  | /registry/events  | List of Registered Events | https://level3.rest/patterns/list#list-resource |
 
 
   Scenario: Cannot delete an event type when ledger has events using it
