@@ -169,7 +169,6 @@ export class Fetch {
   }
 
 
-  // todo reuse this in ledger creation tests
   @given("Ledger has been created")
   public async createLedger() {
     if (!ledgerId) {

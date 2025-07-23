@@ -15,6 +15,7 @@ Feature: Ledgers
     Given follows list entry with name 'API acceptance test ledger'
     And body has number field 'count'
     And body has field 'name' with value 'API acceptance test ledger'
+    And body has field 'description' with value 'Ledger used for REST API testing'
     And has links
       | rel       |  title                         | profile                             |
       | reset     |  Reset the Ledger's Events     | https://level3.rest/profiles/form   |
@@ -34,3 +35,5 @@ Feature: Ledgers
       Then has L3 Lookup profile
       And has L3 Representation profile
       And content is JSON Schema
+
+# TODO test delete ledger
