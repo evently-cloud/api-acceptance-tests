@@ -13,9 +13,9 @@ Feature: Reset ledger
     And Admin Client starts at root
     And follows rel 'ledgers'
     And follows list entry with name 'API acceptance test ledger'
-    And body has field 'count' with value '2'
+    And body has field 'count' with value '4'
     When resets ledger to remembered event id
     And Admin Client starts at root
     Then follows rel 'ledgers'
     And follows list entry with name 'API acceptance test ledger'
-    And body has field 'count' with value '1'
+    And body has field 'count' with value '3'
