@@ -22,18 +22,23 @@ Feature: Ledgers
       | download  |  Download the Ledger's Events  | https://level3.rest/profiles/lookup |
 
 
-    Scenario: Discover reset ledger
-      Given follows list entry with name 'API acceptance test ledger'
-      Given follows rel 'reset'
-      Then has L3 Form profile
-      And content is JSON Schema
+  Scenario: Discover reset ledger
+    Given follows list entry with name 'API acceptance test ledger'
+    Given follows rel 'reset'
+    Then has L3 Form profile
+    And content is JSON Schema
 
 
-    Scenario: Discover download ledger
-      Given follows list entry with name 'API acceptance test ledger'
-      Given follows rel 'download'
-      Then has L3 Lookup profile
-      And has L3 Representation profile
-      And content is JSON Schema
+  Scenario: Discover download ledger
+    Given follows list entry with name 'API acceptance test ledger'
+    Given follows rel 'download'
+    Then has L3 Lookup profile
+    And has L3 Representation profile
+    And content is JSON Schema
 
-# TODO test delete ledger
+
+  Scenario: Delete a ledger
+    Given follows list entry with name 'API acceptance test ledger'
+    When deletes the resource
+    Then result has status code 200
+

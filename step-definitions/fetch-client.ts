@@ -93,6 +93,7 @@ export class Fetch {
 
   // @ts-ignore // it will be set
   private resource: Resource
+  private response: Response | undefined
   private appendedEvent: any = null
   private lastEventId: string = ""
   private lastSelector: Selector | undefined
@@ -754,10 +755,16 @@ export class Fetch {
   @then(/deletes the resource/)
   public async deleteResource() {
     try {
-      await this.resource.delete()
+      this.response = await this.resource.fetchOrThrow({method: "DELETE"})
     } catch (err: any) {
       assert.fail(err)
     }
+  }
+
+
+  @then(/result has status code (\d+)/)
+  public async resultHasStatusCode(expectedStatusCode: number) {
+    assert.equal(this.response?.status, expectedStatusCode)
   }
 
 

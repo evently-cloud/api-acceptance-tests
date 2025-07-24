@@ -61,4 +61,5 @@ Feature: Registry
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
-    Then deletes the resource
+    When deletes the resource
+    Then result has status code 204
