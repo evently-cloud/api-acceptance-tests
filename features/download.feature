@@ -59,7 +59,7 @@ Feature: Download Ledgers
   Scenario: Download from current link with new append
     Given Admin Client downloads entire ledger
     And remembers 'current' link
-    When Authenticated Client appends fact 'Thinks/Light Switched On', key 'bathroom', meta '{}' and data '{}'
+    When Authenticated Client appends fact 'Things/Light Switched On', key 'bathroom', meta '{}' and data '{}'
     And Admin client gets remembered link
     Then Event count is 1
     And last Event is 'Light Switched On'

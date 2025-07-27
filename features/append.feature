@@ -11,7 +11,7 @@ Feature: Append Events
 
 
   Scenario: Cannot append unregistered fact
-    Given Authenticated Client fails to append fact 'Store/Alarm Triggered', key 'Vancouver', meta '{}' and data '{}' because '403'
+    Given Authenticated Client fails to append fact 'Store/Alarm Triggered', key 'Vancouver', meta '{}' and data '{}' because '422'
 
 
   Scenario: Discover append form
