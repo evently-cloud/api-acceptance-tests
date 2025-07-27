@@ -47,17 +47,9 @@ Feature: Registry
       | https://level3.rest/patterns/list#list  | /registry/events  | List of Registered Events | https://level3.rest/patterns/list#list-resource |
 
 
-  Scenario: Cannot delete an event type when ledger has events using it
+  Scenario: Unregister an entity event type
     Given Authenticated Client appends fact 'tests/Registration Tested', key 'a', meta '{}' and data '{"msg":"just a test"}'
     And Registrar Client starts at root
-    And follows rels 'registry,entities'
-    And follows list entry with name 'tests'
-    And follows list entry with name 'Registration Tested'
-    Then fails to delete the resource because of status 422
-
-# todo fix previous scenario and this next one will pass
-  Scenario: Delete an entity event type
-    Given Registrar Client starts at root
     And follows rels 'registry,entities'
     And follows list entry with name 'tests'
     And follows list entry with name 'Registration Tested'
