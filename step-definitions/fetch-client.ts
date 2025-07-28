@@ -1,4 +1,4 @@
-import {BeforeAll, DataTable, setDefaultTimeout} from "@cucumber/cucumber"
+import { DataTable, setDefaultTimeout } from "@cucumber/cucumber"
 import assert from "assert"
 import tsflow from "cucumber-tsflow"
 import { EventSource } from "eventsource"
@@ -12,6 +12,8 @@ const { binding, given, then } = tsflow
 
 // ten minutes. This allows for long debugging sessions
 setDefaultTimeout(600 * 1000);
+
+const LEDGER_NAME = "API acceptance test ledger"
 
 
 type ProfileLink = Link & {
@@ -48,9 +50,6 @@ type AuthInfo = {
   roles: string[]
 }
 
-// share the ledgerId created in BeforeAll with the tests
-let ledgerId: string | undefined
-
 
 function generateAuthToken(auth: AuthInfo) {
   return Buffer.from(JSON.stringify(auth)).toString("base64url")
@@ -62,34 +61,13 @@ function setAuthorization(ketting: Ketting, auth: AuthInfo) {
 }
 
 
-const LEDGER_NAME = "API acceptance test ledger"
-const testLedgerName = LEDGER_NAME
-
-BeforeAll(async function() {
-  const eventlyUrl = process.env.EVENTLY_URL || "NO_URL_SET"
-  const client = new Ketting(eventlyUrl as string)
-  setAuthorization(client, {roles: ["admin"]})
-  const createResource = await client.go("/")
-    .follow("ledgers")
-    .follow("https://level3.rest/patterns/list/editable#add-entry")
-
-  const newLedger = await createResource.postFollow({
-    data: {
-      name: testLedgerName,
-      description: "Ledger used for REST API testing"
-    }
-  })
-  const state = await newLedger.get()
-  ledgerId = state.data.id
-})
-
-
 // constructed during every scenario
 @binding([Workspace])
 export class Fetch {
 
+  private ledgerId: string | undefined
   private clientToken: string = "NO CLIENT TOKEN SET"
-  private client: Ketting
+  private client: Ketting | undefined
 
   // @ts-ignore // it will be set
   private resource: Resource
@@ -111,16 +89,6 @@ export class Fetch {
   public constructor(protected workspace: Workspace) {
     workspace.adminKetting = new Ketting(workspace.eventlyUrl)
     setAuthorization(workspace.adminKetting, {roles: ["admin"]})
-    workspace.registrarKetting = new Ketting(workspace.eventlyUrl)
-    setAuthorization(this.workspace.getRegistrar(), {ledger: ledgerId, roles: ["registrar"]})
-    workspace.publicKetting = new Ketting(workspace.eventlyUrl)
-    setAuthorization(this.workspace.getPublic(), {ledger: ledgerId, roles: ["public"]})
-    workspace.clientKetting = new Ketting(workspace.eventlyUrl)
-    const clientAuthDetails = {ledger: ledgerId, roles: ["client"]}
-    setAuthorization(this.workspace.getClient(),clientAuthDetails )
-    this.client = workspace.getPublic()
-    // needed by NOTIFY tests, which don't use Ketting
-    this.clientToken = generateAuthToken(clientAuthDetails)
   }
 
 
@@ -172,7 +140,7 @@ export class Fetch {
 
   @given("Ledger has been created")
   public async createLedger() {
-    if (!ledgerId) {
+    if (!this.ledgerId) {
       const createResource = await this.workspace.getAdmin().go("/")
         .follow("ledgers")
         .follow("https://level3.rest/patterns/list/editable#add-entry")
@@ -184,7 +152,28 @@ export class Fetch {
         }
       })
       const state = await newLedger.get()
-      ledgerId = state.data.id
+      this.ledgerId = state.data.id
+      this.workspace.registrarKetting = new Ketting(this.workspace.eventlyUrl)
+      setAuthorization(this.workspace.getRegistrar(), {ledger: this.ledgerId, roles: ["registrar"]})
+      this.workspace.publicKetting = new Ketting(this.workspace.eventlyUrl)
+      setAuthorization(this.workspace.getPublic(), {ledger: this.ledgerId, roles: ["public"]})
+      this.workspace.clientKetting = new Ketting(this.workspace.eventlyUrl)
+      const clientAuthDetails = {ledger: this.ledgerId, roles: ["client"]}
+      setAuthorization(this.workspace.getClient(),clientAuthDetails )
+      this.client = this.workspace.getPublic()
+      // needed by NOTIFY tests, which don't use Ketting
+      this.clientToken = generateAuthToken(clientAuthDetails)
+    }
+  }
+
+
+  @given("deletes the ledger")
+  public async deleteLedger() {
+    if (this.ledgerId) {
+      await this.deleteResource()
+      this.ledgerId = undefined
+    } else {
+      throw new Error("no ledger to delete")
     }
   }
 
@@ -232,7 +221,7 @@ export class Fetch {
   }
 
 
-  @given(/follows link to current ledger/)
+  @given("follows link to current ledger")
   public async followCurrentLedger() {
     await this.goToLedger(LEDGER_NAME)
   }
@@ -244,6 +233,7 @@ export class Fetch {
     const entryLinks = state.links.getMany("https://level3.rest/patterns/list#list-entry")
     const entry = entryLinks.find((l) => l.name === name)
     assert.ok(entry !== undefined, `cannot find link named '${name}' in list: ${JSON.stringify(entryLinks)}`)
+    assert.ok(this.client !== undefined, "client not set!")
     this.resource = this.client.go(entry)
   }
 
@@ -266,14 +256,14 @@ export class Fetch {
   }
 
 
-  @then(/Admin Client resets ledger/)
+  @then("Admin Client resets ledger")
   public async resetLedger() {
     await this.resetResource()
     await this.resource.post({data: {}})
   }
 
 
-  @then(/resets ledger to remembered event id/)
+  @then("resets ledger to remembered event id")
   public async resetLedgerToRememberedEvent() {
     assert.ok(this.lastEventId, "last event id not remembered")
     await this.resetResource()
@@ -362,7 +352,7 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client appends facts/)
+  @then("Authenticated Client appends facts")
   public async appendFacts(dataIn: DataTable) {
     const appendRows = dataIn.hashes()
     for (const {entity, event, key, meta, data} of appendRows) {
@@ -518,7 +508,6 @@ export class Fetch {
     await this.followRel("download")
   }
 
-  // todo does this actually work?
   @given(/Authenticated Client filters '(.+)' events with meta filter '(.+)'/)
   public async filterEventsByMeta(entitiesIn: string, metaFilter: string) {
     const selector = await this.selectorResource()
@@ -585,7 +574,7 @@ export class Fetch {
   }
 
 
-  @given(/Authenticated Client filters all data events/)
+  @given("Authenticated Client filters all data events")
   public async filterAllEventsByData(table: DataTable) {
     const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
@@ -594,7 +583,7 @@ export class Fetch {
   }
 
 
-  @given(/Authenticated Client filters data events, after remembered event/)
+  @given("Authenticated Client filters data events, after remembered event")
   public async filterEventsByDataAfterMark(table: DataTable) {
     const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
@@ -621,7 +610,7 @@ export class Fetch {
   }
 
 
-  @given(/Admin Client downloads entire ledger/)
+  @given("Admin Client downloads entire ledger")
   public async downloadAll() {
     await this.downloadResource()
     const state = await this.resource.post({data: {}})
@@ -629,7 +618,7 @@ export class Fetch {
   }
 
 
-  @given(/Admin Client downloads ledger after last appended event/)
+  @given("Admin Client downloads ledger after last appended event")
   public async downloadAfter() {
     await this.downloadResource()
     const state = await this.resource.post({data: {after: this.lastEventId}})
@@ -657,7 +646,7 @@ export class Fetch {
   }
 
 
-  @given(/Admin client gets remembered link/)
+  @given("Admin client gets remembered link")
   public async getRememberedLink() {
     this.resource = this.workspace.getAdmin().go(this.rememberedLink?.href)
     const state = await this.fetch()
@@ -687,7 +676,7 @@ export class Fetch {
 
 
 
-  @then(/subscribes to selector/)
+  @then("Authenticated Client subscribes to selector")
   public async subscribeToSelector() {
     if (this.lastSelector) {
       this.subscribedSelector = this.lastSelector
@@ -727,7 +716,7 @@ export class Fetch {
   }
 
 
-  @then(/remembers last appended event id/)
+  @then("remembers last appended event id")
   public async rememberLastAppendedEventId() {
     this.lastEventId = this.appendedEvent.eventId
   }
@@ -739,20 +728,20 @@ export class Fetch {
   }
 
 
-  @then(/appended event id matches last appended event id/)
+  @then("appended event id matches last appended event id")
   public async eventIdMatchesSavedAppendedEventId() {
     assert.equal(this.appendedEvent.eventId, this.lastEventId)
   }
 
 
-  @then(/remembers selector/)
+  @then("remembers selector")
   public async rememberSelector() {
     // @ts-ignore – Last 'event' is actually the footer
     this.lastSelector = this.selectedEvents.at(-1)
   }
 
 
-  @then(/deletes the resource/)
+  @then("deletes the resource")
   public async deleteResource() {
     try {
       this.response = await this.resource.fetchOrThrow({method: "DELETE"})
@@ -797,67 +786,67 @@ export class Fetch {
   }
 
 
-  @then(/has L3 Home profile/)
+  @then("has L3 Home profile")
   public async hasHomeProfile() {
     await this.hasProfile("https://level3.rest/profiles/home", ["GET", "HEAD"])
   }
 
 
-  @then(/has L3 Info profile/)
+  @then("has L3 Info profile")
   public async hasInfoProfile() {
     await this.hasProfile("https://level3.rest/profiles/info", ["GET", "HEAD"])
   }
 
 
-  @then(/has L3 Nexus profile/)
+  @then("has L3 Nexus profile")
   public async hasNexusProfile() {
     await this.hasProfile("https://level3.rest/profiles/nexus", ["GET", "HEAD", "DELETE"])
   }
 
 
-  @then(/has L3 Form profile/)
+  @then("has L3 Form profile")
   public async hasFormProfile() {
     await this.hasProfile("https://level3.rest/profiles/form", ["GET", "HEAD", "POST"])
   }
 
 
-  @then(/has L3 Lookup profile/)
+  @then("has L3 Lookup profile")
   public async hasLookupProfile() {
     await this.hasProfile("https://level3.rest/profiles/lookup", ["GET", "HEAD", "POST"])
   }
 
 
-  @then(/has L3 Action profile/)
+  @then("has L3 Action profile")
   public async hasActionProfile() {
     await this.hasProfile("https://level3.rest/profiles/action", ["GET", "HEAD", "POST"])
   }
 
 
-  @then(/has L3 Data profile/)
+  @then("has L3 Data profile")
   public async hasDataProfile() {
     await this.hasProfile("https://level3.rest/profiles/data", ["GET", "HEAD", "DELETE"])
   }
 
 
-  @then(/has L3 Representation profile/)
+  @then("has L3 Representation profile")
   public async hasRepresentationProfile() {
     await this.hasProfile("https://level3.rest/profiles/mixins/representation")
   }
 
 
-  @then(/has L3 Add Entry Resource profile/)
+  @then("has L3 Add Entry Resource profile")
   public async hasAddEntryResourceProfile() {
     await this.hasProfile("https://level3.rest/patterns/list#add-entry-resource")
   }
 
 
-  @then(/has L3 List Resource profile/)
+  @then("has L3 List Resource profile")
   public async hasListResourceProfile() {
     await this.hasProfile("https://level3.rest/patterns/list#list-resource")
   }
 
 
-  @then(/has L3 Entry Resource profile/)
+  @then("has L3 Entry Resource profile")
   public async hasEntryResourceProfile() {
     await this.hasProfile("https://level3.rest/patterns/list#entry-resource")
   }
@@ -874,7 +863,7 @@ export class Fetch {
   }
 
 
-  @then(/has links/)
+  @then("has links")
   public async hasLinks(data: DataTable) {
     const state = await this.fetch()
     const {links: actual} = state
@@ -897,7 +886,7 @@ export class Fetch {
   }
 
 
-  @then(/has notify links/)
+  @then("has notify links")
   public async hasNotifyLinks(data: DataTable) {
     const channelUri = this.channel?.uri
     if (channelUri) {
@@ -913,7 +902,7 @@ export class Fetch {
   }
 
 
-  @then(/Client is not authorized/)
+  @then("Client is not authorized")
   public async notAuthorized() {
     try {
       await this.fetch()
@@ -965,8 +954,9 @@ export class Fetch {
   }
 
 
-  @then(/Client fails to open a notification channel/)
+  @then("Client fails to open a notification channel")
   public async openChannelAndFail() {
+    assert.ok(this.client !== undefined, "client not set!")
     const channelOpener = await this.client.go("/")
       .follow("notifications")
       .follow("open-channel")
@@ -982,7 +972,7 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client opens a notification channel/)
+  @then("Authenticated Client opens a notification channel")
   public async openChannel() {
     const channelOpener = await this.workspace.getClient().go("/")
       .follow("notifications")
@@ -1008,13 +998,13 @@ export class Fetch {
   }
 
 
-  @then(/closes channel/)
+  @then("closes channel")
   public async closeChannel() {
     this.eventSource?.close()
   }
 
 
-  @then(/notification matches id and selector/)
+  @then("notification matches id and selector")
   public async notificationMatchesIdAndSelector() {
     // wait for notification to arrive
     await scheduler.wait(100)

@@ -22,6 +22,12 @@ Feature: Ledgers
       | download  |  Download the Ledger's Events  | https://level3.rest/profiles/lookup |
 
 
+  Scenario: Delete a ledger
+    Given follows list entry with name 'API acceptance test ledger'
+    When deletes the ledger
+    Then result has status code 200
+
+
   Scenario: Discover reset ledger
     Given follows list entry with name 'API acceptance test ledger'
     Given follows rel 'reset'
@@ -35,10 +41,3 @@ Feature: Ledgers
     Then has L3 Lookup profile
     And has L3 Representation profile
     And content is JSON Schema
-
-
-  Scenario: Delete a ledger
-    Given follows list entry with name 'API acceptance test ledger'
-    When deletes the resource
-    Then result has status code 200
-
