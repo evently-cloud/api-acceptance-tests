@@ -1,14 +1,14 @@
 import { DataTable, setDefaultTimeout } from "@cucumber/cucumber"
 import assert from "assert"
 import tsflow from "cucumber-tsflow"
+//ts-flow is CommonJS
+const { binding, given, then } = tsflow
 import { EventSource } from "eventsource"
-import { bearerAuth, Ketting, Link, Resource, State } from "ketting"
-import { scheduler} from "timers/promises"
+import { bearerAuth, Ketting, Link, NeverCache, Resource, State } from "ketting"
+import { scheduler } from "timers/promises"
 
 import { Workspace } from "./workspace.js"
 
-//ts-flow is CommonJS
-const { binding, given, then } = tsflow
 
 // ten minutes. This allows for long debugging sessions
 setDefaultTimeout(600 * 1000);
@@ -88,6 +88,7 @@ export class Fetch {
   // This is constructed at the start of every scenario.
   public constructor(protected workspace: Workspace) {
     workspace.adminKetting = new Ketting(workspace.eventlyUrl)
+    workspace.adminKetting.cache = new NeverCache()
     setAuthorization(workspace.adminKetting, {roles: ["admin"]})
   }
 
@@ -154,12 +155,15 @@ export class Fetch {
       const state = await newLedger.get()
       this.ledgerId = state.data.id
       this.workspace.registrarKetting = new Ketting(this.workspace.eventlyUrl)
+      this.workspace.registrarKetting.cache = new NeverCache()
       setAuthorization(this.workspace.getRegistrar(), {ledger: this.ledgerId, roles: ["registrar"]})
       this.workspace.publicKetting = new Ketting(this.workspace.eventlyUrl)
+      this.workspace.publicKetting.cache = new NeverCache()
       setAuthorization(this.workspace.getPublic(), {ledger: this.ledgerId, roles: ["public"]})
       this.workspace.clientKetting = new Ketting(this.workspace.eventlyUrl)
+      this.workspace.clientKetting.cache = new NeverCache()
       const clientAuthDetails = {ledger: this.ledgerId, roles: ["client"]}
-      setAuthorization(this.workspace.getClient(),clientAuthDetails )
+      setAuthorization(this.workspace.getClient(),clientAuthDetails)
       this.client = this.workspace.getPublic()
       // needed by NOTIFY tests, which don't use Ketting
       this.clientToken = generateAuthToken(clientAuthDetails)
@@ -724,7 +728,7 @@ export class Fetch {
 
   @then(/remembers '(.+)' link/)
   public async rememberLink(linkName: string) {
-    this.rememberedLink = this.currentState?.links.get("current")
+    this.rememberedLink = this.currentState?.links.get(linkName)
   }
 
 
