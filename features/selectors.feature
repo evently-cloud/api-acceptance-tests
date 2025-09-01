@@ -35,7 +35,7 @@ Feature: Selectors
 
   Scenario: Replay Events after a known Event
     Given Authenticated Client replays 'Match Started' events for 'Tennis Match', keys '2023-01-09'
-    And remembers selector
+    And remembers selector mark
     When Authenticated Client replays all 'Tennis Match' events, key '2023-01-09' after remembered selector mark
     Then Event count is 3
     And last Event is 'Ball Out'
@@ -48,27 +48,26 @@ Feature: Selectors
 
   Scenario: Replay limited number of events after a known Event
     Given Authenticated Client replays 'Ball Served' events for 'Tennis Match', keys '2023-01-07'
-    And remembers selector
+    And remembers selector mark
     When Authenticated Client replays, after remembered selector mark, 5 'Ball Served, Ball Returned, Ball Out' events from 'Tennis Match', keys '2023-01-07, 2023-01-09'
     Then Event count is 5
     And last Event is 'Ball Returned'
 
   Scenario: Select all events with meta filter
-    ## No way to do this; filters are event-based, not entity-based
-    When Authenticated Client filters 'Tennis Match' events with meta filter '$.command ? (@ % 2 == 0)'
+    When Authenticated Client filters all events with meta filter '$.command ? (@ % 2 == 0)'
     Then Event count is 4
     And last Event is 'Ball Returned'
 
   Scenario: Select subset of events with meta filter
     Given Authenticated Client replays 'Ball Served' events for 'Tennis Match', keys '2023-01-07'
-    And remembers selector
+    And remembers selector mark
     Given Authenticated Client filters, after remembered selector mark, events with meta filter '$.command ? (@ % 2 == 0)'
     Then Event count is 3
     And last Event is 'Ball Returned'
 
   Scenario: Select subset of events with meta filter after a known event
     Given Authenticated Client replays 'Ball Served' events for 'Tennis Match', keys '2023-01-07'
-    And remembers selector
+    And remembers selector mark
     Given Authenticated Client filters, after remembered selector mark, 2 events with meta filter '$.command ? (@ % 2 == 0)'
     Then Event count is 2
     And last Event is 'Match Started'
@@ -85,7 +84,7 @@ Feature: Selectors
 
   Scenario: Select events with data filter after remembered event
     Given Authenticated Client replays 'Ball Served' events for 'Tennis Match', keys '2023-01-07'
-    And remembers selector
+    And remembers selector mark
     When Authenticated Client filters data events, after remembered event
     | entity        | event         | filter                    |
     | Tennis Match  | Match Started | $.players ? (@ == "Char") |
@@ -95,7 +94,7 @@ Feature: Selectors
 
   Scenario: Select limited events with data filter after remembered event
     Given Authenticated Client replays 'Ball Served' events for 'Tennis Match', keys '2023-01-07'
-    And remembers selector
+    And remembers selector mark
     When Authenticated Client filters 4 data events, after remembered event
       | entity        | event         | filter                    |
       | Tennis Match  | Match Started | $.players ? (@ == "Char") |

@@ -26,24 +26,23 @@ type JsonpathQuery = {
 }
 
 type Event = {
-  event:    string,
-  entities: Record<string, string[]>,
-  meta:     string,
+  event:    string
+  entities: Record<string, string[]>
+  meta:     string
   data:     string
 }
 
-type Selector = {
-  selectorId: string,
-  mark:       string
+type SelectorQuery = {
+  entities?:  Record<string, string[]>
+  meta?:      JsonpathQuery
+  events?:    Record<string, JsonpathQuery>
+  after?:      string
 }
 
 function isEvent(input: any): input is Event {
   return input.event
 }
 
-function isSelector(input: any): input is Selector {
-  return input.selectorId
-}
 
 type AuthInfo = {
   ledger?: string,
@@ -74,14 +73,15 @@ export class Fetch {
   private response: Response | undefined
   private appendedEvent: any = null
   private lastEventId: string = ""
-  private lastSelector: Selector | undefined
+  private lastMark: string | undefined
+  private lastSelectorQuery: SelectorQuery | undefined
   private currentState: State | undefined
   private rememberedLink: Link | undefined
-  private selectedEvents: Array<Selector | Event> = []
+  private selectedEvents: Array<string | Event> = []
   private channel: Resource | undefined
-  private subscribedSelector: Selector | undefined
+  private subscriptionId: string | undefined
   private sseMark: string | undefined
-  private sseSelectorsTriggered: string[] = []
+  private sseSubscriptionsTriggered: string[] = []
   private eventSource: EventSource | undefined
 
 
@@ -95,6 +95,17 @@ export class Fetch {
 
   fetch() {
     return this.resource.get()
+  }
+
+
+  async postSelector(query: SelectorQuery): Promise<void> {
+    const selector = await this.workspace.getClient().go("/")
+      .follow("selectors")
+
+    const state = await selector.post({data: query})
+    await this.processSelectorDownloadResult(state)
+
+    this.lastSelectorQuery = query
   }
 
 
@@ -374,7 +385,7 @@ export class Fetch {
       },
       meta:     JSON.parse(metaIn),
       data:     JSON.parse(dataIn),
-      selector: this.lastSelector
+      selector: this.lastSelectorQuery
     }
     const appender = await this.appender()
     const appendResult = await appender.post({data: appendEvent})
@@ -392,7 +403,7 @@ export class Fetch {
       idempotencyKey,
       meta:     JSON.parse(metaIn),
       data:     JSON.parse(dataIn),
-      selector: this.lastSelector
+      selector: this.lastSelectorQuery
     }
     const appender = await this.appender()
     const appendResult = await appender.post({data: appendEvent})
@@ -409,7 +420,7 @@ export class Fetch {
       },
       meta:     JSON.parse(metaIn),
       data:     JSON.parse(dataIn),
-      selector: this.lastSelector
+      selector: this.lastSelectorQuery
     }
     const appender = await this.appender()
 
@@ -424,86 +435,70 @@ export class Fetch {
 
   @then(/Authenticated Client replays all events for '(.+)', keys '(.+)'/)
   public async replayAllEvents(entity: string, keysIn: string) {
-    const selector = await this.selectorResource()
     const keys = this.toList(keysIn)
-    const data = {
+    const query = {
       entities: {
         [entity]: keys
       }
     }
-    const state = await selector.post({data})
-    await this.processSelectorDownloadResult(state)
+    await this.postSelector(query)
   }
 
 
   @then(/Authenticated Client replays '(.+)' events for '(.+)', keys '(.+)'/)
   public async replaySpecificEvents(eventsIn: string, entity: string, keysIn: string) {
-    const selector = await this.selectorResource()
     const events = this.toEventQueries(eventsIn)
     const keys = this.toList(keysIn)
-    const data = {
+    const query = {
       entities: {
         [entity]: keys
       },
       events
     }
-    const state = await selector.post({data})
-    await this.processSelectorDownloadResult(state)
+    await this.postSelector(query)
   }
 
 
   @then(/Authenticated Client replays all '(.+)' events, key '(.+)' after remembered selector mark/)
   public async replayAfterRememberedEvent(entity: string, key: string) {
-    const selector = await this.selectorResource()
-    const data = {
+    const query = {
       entities: {
         [entity]: [key]
       },
-      after: this.lastSelector?.mark
+      after: this.lastMark
     }
-    const state = await selector.post({data})
-    await this.processSelectorDownloadResult(state)
+    await this.postSelector(query)
   }
 
 
   @then(/Authenticated Client replays (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
   public async replayEventsWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
-    const selector = await this.selectorResource()
     const events = this.toEventQueries(eventsIn)
     const keys = this.toList(keysIn)
-    const data = {
+    const query = {
       entities: {
         [entity]: keys
       },
       events,
       limit
     }
-    const state = await selector.post({data})
-    await this.processSelectorDownloadResult(state)
+    await this.postSelector(query)
   }
 
 
   @then(/Authenticated Client replays, after remembered selector mark, (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
   public async replayEventsAfterMarkWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
-    const selector = await this.selectorResource()
     const events = this.toEventQueries(eventsIn)
     const keys = this.toList(keysIn)
-    const data = {
+    const query = {
       entities: {
         [entity]: keys
       },
       events,
       limit,
-      after: this.lastSelector?.mark
+      after: this.lastMark
     }
-    const state = await selector.post({data})
-    await this.processSelectorDownloadResult(state)
-  }
-
-
-  private selectorResource() {
-    return this.workspace.getClient().go("/")
-      .follow("selectors")
+    await this.postSelector(query)
   }
 
 
@@ -512,47 +507,34 @@ export class Fetch {
     await this.followRel("download")
   }
 
-  @given(/Authenticated Client filters '(.+)' events with meta filter '(.+)'/)
-  public async filterEventsByMeta(entitiesIn: string, metaFilter: string) {
-    const selector = await this.selectorResource()
-    const entities = this.toList(entitiesIn)
-    const meta = {query: metaFilter}
-    const data = entities.reduce((acc, e) => {
-      acc[e] = {
-        query: "$"
-      } // no specific events
-      return acc
-    }, {} as Record<string, any>)
-    const sendData = { meta, data }
-    const state = await selector.post({data: sendData})
-    await this.processSelectorDownloadResult(state)
+  @given(/Authenticated Client filters all events with meta filter '(.+)'/)
+  public async filterEventsByMeta(metaFilter: string) {
+    const meta = { query: metaFilter }
+    const query = { meta }
+    await this.postSelector(query)
  }
 
 
   @given(/Authenticated Client filters, after remembered selector mark, events with meta filter '(.+)'/)
   public async filterEventsAfterByMeta(metaFilter: string) {
-    const meta = {query: metaFilter}
-    const selector = await this.selectorResource()
-    const sendData = {
+    const meta = { query: metaFilter }
+    const query = {
       meta,
-      after: this.lastSelector?.mark
+      after: this.lastMark
     }
-    const state = await selector.post({data: sendData})
-    await this.processSelectorDownloadResult(state)
+    await this.postSelector(query)
   }
 
 
   @given(/Authenticated Client filters, after remembered selector mark, (\d+) events with meta filter '(.+)'/)
   public async filterLimitedEventsAfterByMeta(limit: number, metaFilter: string) {
-    const meta = {query: metaFilter}
-    const selector = await this.selectorResource()
-    const sendData = {
+    const meta = { query: metaFilter }
+    const query = {
       meta,
       limit,
-      after: this.lastSelector?.mark
+      after: this.lastMark
     }
-    const state = await selector.post({data: sendData})
-    await this.processSelectorDownloadResult(state)
+    await this.postSelector(query)
   }
 
 
@@ -580,37 +562,32 @@ export class Fetch {
 
   @given("Authenticated Client filters all data events")
   public async filterAllEventsByData(table: DataTable) {
-    const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
-    const state = await selector.post({data: {events: filters}})
-    await this.processSelectorDownloadResult(state)
+    const query = { events: filters }
+    await this.postSelector(query)
   }
 
 
   @given("Authenticated Client filters data events, after remembered event")
   public async filterEventsByDataAfterMark(table: DataTable) {
-    const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
-    const state = await selector.post({data: {
-        events: filters,
-        after: this.lastSelector?.mark
-      }
-    })
-    await this.processSelectorDownloadResult(state)
+    const query = {
+      events: filters,
+      after: this.lastMark
+    }
+    await this.postSelector(query)
   }
 
 
   @given(/Authenticated Client filters (\d+) data events, after remembered event/)
   public async filterLimitedEventsByDataAfterMark(limit: number, table: DataTable) {
-    const selector = await this.selectorResource()
     const filters = this.tableToFilters(table)
-    const state = await selector.post({data: {
-        events: filters,
-        after: this.lastSelector?.mark,
-        limit
-      }
-    })
-    await this.processSelectorDownloadResult(state)
+    const query = {
+      events: filters,
+      after: this.lastMark,
+      limit
+    }
+    await this.postSelector(query)
   }
 
 
@@ -661,8 +638,8 @@ export class Fetch {
   public async countSelectedEvents(expectedCount: number) {
     const lastRow = this.selectedEvents.at(-1)
     const length = this.selectedEvents.length
-    // deduct footer row from event count, if present
-    const actualCount = lastRow && isSelector(lastRow)
+    // deduct footer row from event count, if present. Might be a footer, which is not an event
+    const actualCount = lastRow && !isEvent(lastRow)
       ? length - 1
       : length
     assert.equal(actualCount, expectedCount)
@@ -682,24 +659,15 @@ export class Fetch {
 
   @then("Authenticated Client subscribes to selector")
   public async subscribeToSelector() {
-    if (this.lastSelector) {
-      this.subscribedSelector = this.lastSelector
-    }
     const subscribe = await this.channel?.follow("subscribe")
-    const subscription = await subscribe?.postFollow({
-      data: {
-      selectorId: this.lastSelector?.selectorId
-      }
-    })
+    const subscription = await subscribe?.postFollow({ data: this.lastSelectorQuery })
     if (subscription) {
       this.resource = subscription
       let result = await subscription.fetch()
-      const {selector, selectorType} = await result.json()
-      if (selector.keys) {
-        assert.equal(selectorType, "Replay selector")
-      } else {
-        assert.equal(selectorType, "Filter selector")
-      }
+      const body = await result.json()
+      const {id, selectorType} = body
+      this.subscriptionId = id
+      assert.equal(selectorType, "Event Filter")
       // check subscriptions resource
       const subs = await this.channel?.follow("subscriptions")
       if (subs) {
@@ -738,10 +706,15 @@ export class Fetch {
   }
 
 
-  @then("remembers selector")
+  @then("remembers selector mark")
   public async rememberSelector() {
     // @ts-ignore – Last 'event' is actually the footer
-    this.lastSelector = this.selectedEvents.at(-1)
+    this.lastMark = this.selectedEvents.at(-1).mark
+    if (this.lastSelectorQuery) {
+      this.lastSelectorQuery.after = this.lastMark
+    } else {
+      assert ("cannot remember, last selector query is undefined.")
+    }
   }
 
 
@@ -982,7 +955,7 @@ export class Fetch {
       .follow("notifications")
       .follow("open-channel")
 
-    this.channel = await channelOpener.postFollow({data:{}})
+    this.channel = await channelOpener.postFollow({data: {}})
     this.resource = this.channel
     const stream = await this.channel.follow("stream")
     this.eventSource = new EventSource(stream?.uri || "NO URI FOR STREAM", {
@@ -995,9 +968,9 @@ export class Fetch {
           },
         }),
     })
-    this.eventSource.addEventListener("Selectors Triggered", (me) => {
+    this.eventSource.addEventListener("Subscriptions Triggered", (me) => {
       this.sseMark = me.lastEventId
-      this.sseSelectorsTriggered = me.data.split(",")
+      this.sseSubscriptionsTriggered = me.data.split(",")
     })
   }
 
@@ -1008,11 +981,12 @@ export class Fetch {
   }
 
 
-  @then("notification matches id and selector")
+  @then("notification matches event id and subscription")
   public async notificationMatchesIdAndSelector() {
     // wait for notification to arrive
-    await scheduler.wait(100)
+    await scheduler.wait(1000)
     assert.equal(this.lastEventId, this.sseMark)
-    assert.ok(this.sseSelectorsTriggered.includes(this.subscribedSelector?.selectorId || ""))
+    assert.ok(this.sseSubscriptionsTriggered.includes(this.subscriptionId || ""),
+      `triggered list ${this.sseSubscriptionsTriggered} missing '${this.subscriptionId}'`)
   }
 }
