@@ -42,13 +42,13 @@ Feature: Append Events
   Scenario: Append atomic events
   Given Authenticated Client replays 'Cart Purchased' events for 'Cart', keys '1'
   And Event count is 0
-  Then remembers selector mark
+  Then remembers selector position
   And Authenticated Client atomically appends event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Carrots"}'
 
 
   Scenario: Append atomic events with idempotency key
     Given Authenticated Client replays 'Cart Purchased' events for 'Cart', keys '1'
-    And remembers selector mark
+    And remembers selector position
     And Authenticated Client atomically appends idempotency-key 'hazelnuts', event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Carrots"}'
     And remembers last appended event id
     When Authenticated Client atomically appends idempotency-key 'hazelnuts', event 'Cart/Item Added', key '1', meta '{}' and data '{"sku":"Carrots"}'
@@ -58,14 +58,14 @@ Feature: Append Events
   Scenario: Cannot atomically append events when selector has new matches
     Given Authenticated Client replays 'Cart Purchased' events for 'Cart', keys '1'
     And Event count is 0
-    And remembers selector mark
+    And remembers selector position
     When Authenticated Client atomically appends event 'Cart/Cart Purchased', key '1', meta '{}' and data '{"payment":"cash"}'
     Then Authenticated Client fails to atomically append event 'Cart/Cart Purchased', key '1', meta '{}' and data '{"payment":"Debit"}' because '409'
 
 
   Scenario: Atomically append events with a meta filter selector
     Given Authenticated Client filters all events with meta filter '$.clerk ? (@=="Ami")'
-    And remembers selector mark
+    And remembers selector position
     When Authenticated Client atomically appends event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Turnips"}'
     Then Authenticated Client fails to atomically append event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Ketchup_Chips"}' because '409'
 
@@ -74,6 +74,6 @@ Feature: Append Events
     Given Authenticated Client filters all data events
       | event         | filter                  |
       | Item Stocked  | $.sku ? (@ == "Limes")  |
-    And remembers selector mark
+    And remembers selector position
     When Authenticated Client atomically appends event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Limes"}'
     Then Authenticated Client fails to atomically append event 'Store/Item Stocked', key 'Vancouver', meta '{"clerk":"Ami"}' and data '{"sku":"Limes"}' because '409'

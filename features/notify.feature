@@ -36,7 +36,7 @@ Feature: Notifications
   Scenario: Subscribe to a replay selector
     Given Authenticated Client opens a notification channel
     And Authenticated Client replays all events for 'Tennis Match', keys '2023-01-09'
-    And remembers selector mark
+    And remembers selector position
     When Authenticated Client subscribes to selector
     And content is HAL
     And has L3 Data profile
@@ -55,7 +55,7 @@ Feature: Notifications
     And Authenticated Client filters all data events
       | event         | filter                    |
       | Ball Served   | $.player ? (@ == "Char")  |
-    And remembers selector mark
+    And remembers selector position
     When Authenticated Client subscribes to selector
     And content is HAL
     And has L3 Data profile

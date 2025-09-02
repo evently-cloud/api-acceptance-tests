@@ -26,6 +26,7 @@ type JsonpathQuery = {
 }
 
 type Event = {
+  eventId:  string
   event:    string
   entities: Record<string, string[]>
   meta:     string
@@ -37,10 +38,6 @@ type SelectorQuery = {
   meta?:      JsonpathQuery
   events?:    Record<string, JsonpathQuery>
   after?:      string
-}
-
-function isEvent(input: any): input is Event {
-  return input.event
 }
 
 
@@ -73,11 +70,11 @@ export class Fetch {
   private response: Response | undefined
   private appendedEvent: any = null
   private lastEventId: string = ""
-  private lastMark: string | undefined
+  private lastSelectorPosition: string | undefined
   private lastSelectorQuery: SelectorQuery | undefined
   private currentState: State | undefined
   private rememberedLink: Link | undefined
-  private selectedEvents: Array<string | Event> = []
+  private selectedEvents: Event[] = []
   private channel: Resource | undefined
   private subscriptionId: string | undefined
   private sseMark: string | undefined
@@ -459,13 +456,13 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client replays all '(.+)' events, key '(.+)' after remembered selector mark/)
+  @then(/Authenticated Client replays all '(.+)' events, key '(.+)' after remembered selector position/)
   public async replayAfterRememberedEvent(entity: string, key: string) {
     const query = {
       entities: {
         [entity]: [key]
       },
-      after: this.lastMark
+      after: this.lastSelectorPosition
     }
     await this.postSelector(query)
   }
@@ -486,7 +483,7 @@ export class Fetch {
   }
 
 
-  @then(/Authenticated Client replays, after remembered selector mark, (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
+  @then(/Authenticated Client replays, after remembered selector position, (\d+) '(.+)' events from '(.+)', keys '(.+)'/)
   public async replayEventsAfterMarkWithLimit(limit: number, eventsIn: string, entity: string, keysIn: string) {
     const events = this.toEventQueries(eventsIn)
     const keys = this.toList(keysIn)
@@ -496,7 +493,7 @@ export class Fetch {
       },
       events,
       limit,
-      after: this.lastMark
+      after: this.lastSelectorPosition
     }
     await this.postSelector(query)
   }
@@ -515,24 +512,24 @@ export class Fetch {
  }
 
 
-  @given(/Authenticated Client filters, after remembered selector mark, events with meta filter '(.+)'/)
+  @given(/Authenticated Client filters, after remembered selector position, events with meta filter '(.+)'/)
   public async filterEventsAfterByMeta(metaFilter: string) {
     const meta = { query: metaFilter }
     const query = {
       meta,
-      after: this.lastMark
+      after: this.lastSelectorPosition
     }
     await this.postSelector(query)
   }
 
 
-  @given(/Authenticated Client filters, after remembered selector mark, (\d+) events with meta filter '(.+)'/)
+  @given(/Authenticated Client filters, after remembered selector position, (\d+) events with meta filter '(.+)'/)
   public async filterLimitedEventsAfterByMeta(limit: number, metaFilter: string) {
     const meta = { query: metaFilter }
     const query = {
       meta,
       limit,
-      after: this.lastMark
+      after: this.lastSelectorPosition
     }
     await this.postSelector(query)
   }
@@ -573,7 +570,7 @@ export class Fetch {
     const filters = this.tableToFilters(table)
     const query = {
       events: filters,
-      after: this.lastMark
+      after: this.lastSelectorPosition
     }
     await this.postSelector(query)
   }
@@ -584,7 +581,7 @@ export class Fetch {
     const filters = this.tableToFilters(table)
     const query = {
       events: filters,
-      after: this.lastMark,
+      after: this.lastSelectorPosition,
       limit
     }
     await this.postSelector(query)
@@ -636,23 +633,15 @@ export class Fetch {
 
   @then(/Event count is (\d+)/)
   public async countSelectedEvents(expectedCount: number) {
-    const lastRow = this.selectedEvents.at(-1)
     const length = this.selectedEvents.length
-    // deduct footer row from event count, if present. Might be a footer, which is not an event
-    const actualCount = lastRow && !isEvent(lastRow)
-      ? length - 1
-      : length
-    assert.equal(actualCount, expectedCount)
+    assert.equal(length, expectedCount)
   }
 
 
   @then(/last Event is '(.+)'/)
   public async lastEventIs(expectedEvent: string) {
-    const lastRow = this.selectedEvents.at(-1)
-    const lastEvent = isEvent(lastRow)
-      ? lastRow
-      : this.selectedEvents.at(-2) as Event
-    assert.equal(lastEvent.event, expectedEvent)
+    const lastEvent = this.selectedEvents.at(-1)
+    assert.equal(lastEvent?.event, expectedEvent)
   }
 
 
@@ -706,12 +695,11 @@ export class Fetch {
   }
 
 
-  @then("remembers selector mark")
-  public async rememberSelector() {
-    // @ts-ignore – Last 'event' is actually the footer
-    this.lastMark = this.selectedEvents.at(-1).mark
+  @then("remembers selector position")
+  public async rememberSelectorPosition() {
+    this.lastSelectorPosition = this.selectedEvents?.at(-1)?.eventId
     if (this.lastSelectorQuery) {
-      this.lastSelectorQuery.after = this.lastMark
+      this.lastSelectorQuery.after = this.lastSelectorPosition
     } else {
       assert ("cannot remember, last selector query is undefined.")
     }
