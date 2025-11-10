@@ -972,7 +972,7 @@ export class Fetch {
   @then("notification matches event id and subscription")
   public async notificationMatchesIdAndSelector() {
     // wait for notification to arrive
-    await scheduler.wait(1000)
+    await scheduler.wait(100)
     assert.equal(this.lastEventId, this.sseMark)
     assert.ok(this.sseSubscriptionsTriggered.includes(this.subscriptionId || ""),
       `triggered list ${this.sseSubscriptionsTriggered} missing '${this.subscriptionId}'`)
