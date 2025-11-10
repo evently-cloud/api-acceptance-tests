@@ -5,4 +5,4 @@ default:
   import:
     - step-definitions/**/*.ts
   format:
-    - "@cucumber/pretty-formatter"
+    - pretty
